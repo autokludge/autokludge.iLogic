@@ -1,0 +1,132 @@
+﻿Sub Main()
+	If invalid_file(ThisDoc.Document) Then 
+		Return
+	End If
+	
+	Dim hole_format As String = InputBox("Hole Format e.g v90,50,70", "Hole Format String", "v90,35")
+	Dim cpoints As ObjectCollection = hole_points(hole_format)
+	If cpoints.Count < 2 Then
+		Logger.Error("Please ensure hole format is followed")
+		Logger.Error("e.g  v90,50,70 | v70,35 ")
+		Return
+	End If
+	
+	'FIXME: remove this after hole_points is done
+	'Return
+	
+	Dim sketch_cpoints As ObjectCollection = ThisApplication.TransientObjects.CreateObjectCollection()
+	
+	Dim part_doc As PartDocument = ThisDoc.Document
+	Dim part_def As PartComponentDefinition = part_doc.ComponentDefinition	
+	Dim z_axis As WorkAxis = part_def.WorkAxes(3)
+	Dim start_plane As WorkPlane = part_def.WorkPlanes.Item("Start plane")
+	Dim end_plane As WorkPlane = part_def.WorkPlanes.Item("End plane")
+		
+	Dim tr = ThisApplication.TransactionManager.StartTransaction(part_doc, "Add Bolt Holes")
+	Try
+		Dim sketch As PlanarSketch = part_def.Sketches.Add(part_def.WorkPlanes(1)) 'YZ Plane
+		
+		sketch.Edit()
+		Dim z_ent As SketchLine = sketch.AddByProjectingEntity(z_axis)
+		Dim st_ent As SketchLine = sketch.AddByProjectingEntity(start_plane)
+		Dim end_ent As SketchLine = sketch.AddByProjectingEntity(end_plane)
+		Dim end_y As Double = end_ent.RangeBox.MaxPoint.Y
+		Logger.Info("End Y is: {0}", {end_y.ToString})		
+		' x+ is top
+		' y+ is end
+		
+		For Each pnt As Point2d In cpoints
+			Logger.Info("Adding point to sketch {0},{1}", {pnt.X, pnt.Y})
+			Dim sk_ctr = sketch.SketchPoints.Add(pnt, True)
+			Dim dc1 As OffsetDimConstraint = sketch.DimensionConstraints.AddOffset(z_ent, sk_ctr, p2d(pnt.X/2, pnt.Y + 1), False, False)
+			Dim dc2 As OffsetDimConstraint = sketch.DimensionConstraints.AddOffset(st_ent, sk_ctr, p2d(pnt.X + 1, pnt.Y / 2), False, False)
+			If sketch_cpoints.Count < 1 Then
+				sketch_cpoints.Add(sk_ctr)	
+			End If
+			
+			Dim pnt_oe = p2d(pnt.X, end_y - pnt.Y)
+			Logger.Info("Adding point to sketch {0},{1}", {pnt_oe.X, pnt_oe.Y})
+			Dim sk_ctr2 = sketch.SketchPoints.Add(pnt_oe, True)
+			Dim dc3 As OffsetDimConstraint = sketch.DimensionConstraints.AddOffset(z_ent, sk_ctr2, p2d(pnt_oe.X/2, pnt_oe.Y + 1), False, False)
+			Dim dc4 As OffsetDimConstraint = sketch.DimensionConstraints.AddOffset(end_ent, sk_ctr2, p2d(pnt_oe.X + 1, pnt_oe.Y + pnt.Y / 2), False, False)
+			'sketch_cpoints.Add(sk_ctr2)	
+		Next
+		sketch.ExitEdit()
+		
+		Dim sk_hole_placement As SketchHolePlacementDefinition = part_def.Features.HoleFeatures.CreateSketchPlacementDefinition(sketch_cpoints)
+		Dim hole_feat As HoleFeature = part_def.Features.HoleFeatures.AddDrilledByThroughAllExtent(sk_hole_placement, "22 mm", PartFeatureExtentDirectionEnum.kSymmetricExtentDirection)
+		Dim sk_hole_pattern_def = part_def.Features.SketchDrivenPatternFeatures.CreateDefinition(oc(hole_feat), sketch, hole_feat.HoleCenterPoints(1))
+		part_def.Features.SketchDrivenPatternFeatures.Add(sk_hole_pattern_def)
+	Catch
+		tr.Abort()
+		Return
+	End Try
+	tr.End()
+		
+End Sub
+
+Function invalid_file(doc As Document) As Boolean
+	Dim pcd As PartComponentDefinition
+	Logger.Info("Part type is {0}", {DirectCast(doc.DocumentType, DocumentTypeEnum).ToString})
+	If doc.DocumentType = DocumentTypeEnum.kPartDocumentObject Then
+		Return False
+	End If
+	pcd = DirectCast(doc, PartDocument).ComponentDefinition
+	If Not pcd.IsContentMember Then
+		Logger.Error("Sorry, only content centre members supported")
+		Return True
+	End If
+	Return false
+End Function
+
+Function hole_points(end_hole_format_string As String) As ObjectCollection
+	'Example formats:
+	'	v90,50,70  (4 holes - 70x90, 50 in from end)
+	'	v70,35	   (2 holes - 70 ctrs, 35 in from end)
+	Dim holes As ObjectCollection = ThisApplication.TransientObjects.CreateObjectCollection()
+	If Not end_hole_format_string.Contains(",") Then
+		Return holes
+	End If
+	
+	Dim parts As String() = end_hole_format_string.Split(",")
+	Dim parts_list As New List(Of String)
+	parts_list.AddRange(parts)
+	Logger.Info("{0} parts in format", {parts.Length})
+	If parts_list.Count < 2 Then
+		Logger.Error("Need at least 2 parts to format string")
+		Return holes
+	Else If Not parts_list.Item(0).IndexOf("v") = 0 Then
+		Logger.Error("First part should follow format e.g v90")
+		Return holes
+	End If
+	
+	Dim vert = Double.Parse(parts_list(0).Replace("v", ""))/10.0
+	parts_list.RemoveAt(0)
+	
+	Dim inset_val As Double = 0
+	For Each p As String In parts_list
+		Dim col_value As Double = Double.Parse(p) / 10.0
+		inset_val += col_value
+		
+		holes.Add(p2d(vert / 2, inset_val))
+		Logger.Info("Added hole at {0},{1}", {vert / 2, inset_val})
+		holes.Add(p2d(vert / -2, inset_val))
+		Logger.Info("Added hole at {0},{1}", {vert / -2, inset_val})
+		
+	Next		
+	
+	Return holes
+End Function
+	
+Function p2d(x As Double, y As Double) As Point2d
+	Dim point As Point2d = ThisApplication.TransientGeometry.CreatePoint2d(x, y)
+	Return point
+End Function
+
+Function oc(Optional something = Nothing) As ObjectCollection
+	Dim obcollection As ObjectCollection = ThisApplication.TransientObjects.CreateObjectCollection()
+	If Not something Is Nothing Then
+		obcollection.Add(something)
+	End If
+	Return obcollection
+End Function

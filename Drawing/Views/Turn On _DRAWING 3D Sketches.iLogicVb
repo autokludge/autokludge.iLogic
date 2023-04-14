@@ -1,0 +1,64 @@
+﻿Sub Main()
+
+Dim oDrawingDoc As DrawingDocument
+oDrawingDoc = ThisDoc.Document
+
+Dim oView As DrawingView
+
+Dim oSelectSet As SelectSet
+oSelectSet = oDrawingDoc.SelectSet
+
+If oSelectSet.Count < 1 Then
+	Return
+End if
+
+For Each selection In oSelectSet
+    If TypeOf selection Is DrawingView Then
+	    oView = selection
+		Exit For
+    End If
+Next
+
+Dim viewDoc As DocumentDescriptor = oView.ReferencedDocumentDescriptor
+If viewDoc.ReferencedDocumentType = DocumentTypeEnum.kPartDocumentObject Then
+	
+	Dim oPartDef As PartComponentDefinition = viewDoc.ReferencedDocument
+	
+	TurnOnDrawingSketches(oView.ReferencedDocumentDescriptor.ReferencedDocument, oView)
+	
+Else If viewDoc.ReferencedDocumentType = DocumentTypeEnum.kAssemblyDocumentObject Then
+	
+	Dim oAssembly As AssemblyDocument
+	oAssembly = oView.ReferencedDocumentDescriptor.ReferencedDocument
+	
+	Dim refDocs As DocumentsEnumerator = oAssembly.AllReferencedDocuments
+	
+	'Msgbox(refDocs.count)
+	
+	For Each rDoc As Document In refDocs
+		If rDoc.DocumentType = DocumentTypeEnum.kPartDocumentObject Then
+			Dim pdoc As PartDocument = rDoc
+			TurnOnDrawingSketches(pdoc.ComponentDefinition, oView)
+		End If
+	Next
+		
+Else
+	MsgBox("must be view of a part or assembly")
+	Return 
+End If
+
+oView.Parent.Update()
+
+End Sub
+
+Sub TurnOnDrawingSketches(ByVal oPartDef As PartComponentDefinition, oView As DrawingView)
+	Dim oSketch3d As Sketch3D 
+
+	For Each oSketch3d In oPartDef.Sketches3D
+		If oSketch3d.Name.Contains("DRAWING") Then
+			MsgBox("turn on" + oSketch3d.Name)
+			oView.SetVisibility(oSketch3d, True)
+		End If
+	Next
+End Sub
+

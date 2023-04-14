@@ -1,0 +1,35 @@
+﻿Dim oDoc As Document = ThisApplication.ActiveDocument
+Dim oDrawDoc As DrawingDocument = ThisDrawing.Document
+Dim oSheets As Sheets
+oSheets = oDrawDoc.Sheets
+Dim oViews As DrawingViews
+
+Dim oTM As TransactionManager = ThisApplication.TransactionManager
+Dim oT As Transaction
+
+oT = oTM.StartTransaction(oDoc, "Include Hole Centrelines")
+
+For Each oSheet As Sheet In oSheets
+	oViews = oSheet.DrawingViews
+	For Each oView As DrawingView In oViews
+		Dim clSettings As AutomatedCenterlineSettings
+		oView.GetAutomatedCenterlineSettings(clSettings)
+		
+		clSettings.ApplyToBends = False
+		clSettings.ApplyToCircularPatterns = False
+		clSettings.ApplyToCylinders = True
+		clSettings.ApplyToFillets = False
+		clSettings.ApplyToHoles = True
+		clSettings.ApplyToPunches = False
+		clSettings.ApplyToRectangularPatterns = False
+		clSettings.ApplyToRevolutions = False
+		clSettings.ApplyToSketches = False
+		clSettings.ApplyToWorkFeatures = False
+		clSettings.ProjectionNormalAxis = True
+		clSettings.ProjectionParallelAxis = False
+		
+		oView.SetAutomatedCenterlineSettings(clSettings)
+	Next
+Next
+
+oT.End()

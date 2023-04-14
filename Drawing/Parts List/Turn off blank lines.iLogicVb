@@ -1,0 +1,42 @@
+﻿Imports System.Collections
+Sub Main()
+
+Dim string_pattern As String
+string_pattern = InputBox("String to Match= ", "Match String", "")
+
+If string_pattern = "" Then
+	Return
+End If
+
+If ThisDoc.Document.DocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+	MsgBox("Run from drawing document")
+	Return
+End If
+
+Dim aDoc As DrawingDocument = ThisDoc.Document
+Dim aSheet As Sheet = aDoc.ActiveSheet
+
+If aSheet.PartsLists.Count < 1 Then
+	MsgBox("Parts list required")
+	Return
+End If
+
+Dim aPartsList As PartsList = aSheet.PartsLists(1)
+
+For Each c As PartsListColumn In aPartsList.PartsListColumns
+	Logger.Info("COLUMN: {0}", {c.Title})
+Next
+
+Dim t As Transaction = ThisApplication.TransactionManager.StartTransaction(aDoc, "ilogic Parts List Filter")
+Try
+
+For Each plr As PartsListRow In aPartsList.PartsListRows
+	plr.Visible = plr.Item("Mark No.").Value.Contains(string_pattern)
+Next
+
+Catch
+	t.Abort()
+End Try
+t.End()
+
+End Sub

@@ -1,0 +1,21 @@
+﻿Sub main()
+	For Each vdoc As Document In ThisApplication.Documents.VisibleDocuments
+		If vdoc.DocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+			Continue For
+		End If
+		
+		set_part_number(vdoc)
+	Next
+End Sub
+
+Sub set_part_number(ddoc As DrawingDocument)
+	Dim part_number_property As Inventor.Property = ddoc.PropertySets.Item("Design Tracking Properties").Item("Part Number")
+	Dim fname As String = ddoc.DisplayName.Replace(".dwg", "")
+	
+	Logger.Info("Document: {0} | Part Number: {1}",{fname, part_number_property.Value})
+	
+	If fname <> part_number_property.Value Then
+		part_number_property.Value = fname
+	End If
+	
+End Sub

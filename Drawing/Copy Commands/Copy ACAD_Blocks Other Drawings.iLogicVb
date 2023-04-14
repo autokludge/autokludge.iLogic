@@ -1,0 +1,130 @@
+﻿Dim oDocs As Documents = ThisApplication.Documents
+Dim oDoc As Document
+Dim oDrawingDoc As DrawingDocument
+
+Dim oTG As TransientGeometry
+oTG = ThisApplication.TransientGeometry
+
+Dim oTM As TransactionManager = ThisApplication.TransactionManager
+Dim oT As Transaction
+
+Dim items As Integer = 0
+
+Dim oACADBlock As AutoCADBlock 
+Dim oSelectSet As SelectSet
+oSelectSet = ThisApplication.ActiveDocument.SelectSet
+
+Dim sActiveDocName As String
+Dim sActiveSheetName As String
+sActiveDocName = ThisApplication.ActiveDocument.DisplayName
+Dim dDoc As DrawingDocument = ThisApplication.ActiveDocument
+sActiveSheetName = dDoc.ActiveSheet.Name
+
+Dim acDoc As DrawingDocument = ThisApplication.ActiveDocument
+Dim dwgFullFileName As String
+
+Dim oACADBlockDefs() As String
+Dim oACADBlocksToMove As ObjectCollection
+Dim ooACADBlocksToMovesToMovePosition As ObjectCollection
+oACADBlocksToMove = ThisApplication.TransientObjects.CreateObjectCollection '1 index
+ooACADBlocksToMovesToMovePosition = ThisApplication.TransientObjects.CreateObjectCollection
+
+If oSelectSet.Count = 0 Then
+	MsgBox("none selected")
+	Return
+End If
+
+Dim idx = 0
+
+For Each selection In oSelectSet
+    If TypeOf selection Is AutoCADBlock Then
+	    oACADBlock = selection
+		dwgFullFileName = acDoc.FullFileName
+		oACADBlocksToMove.Add(oACADBlock.Definition)
+		ReDim Preserve oACADBlockDefs(idx)
+		oACADBlockDefs(idx) = oACADBlock.Definition.Name
+		idx += 1
+		ooACADBlocksToMovesToMovePosition.Add(oACADBlock.Position)
+    End If
+Next
+
+For i = oACADBlockDefs.Count - 1 To 0 Step -1
+	If (oACADBlockDefs(i) = "") Then
+		
+	End If
+Next
+
+'MsgBox(String.Join(", ", oACADBlockDefs))
+'return
+
+For Each oDoc In ThisApplication.Documents.VisibleDocuments
+'	If oDoc.DisplayName = sActiveDocName Then
+'		Continue For 
+'	End If
+	'msgbox("test")
+    If oDoc.DocumentType = 12292 Then '12292 = drawing doc
+		oDrawingDoc = oDoc
+		
+		If oDrawingDoc.DisplayName = sActiveDocName And oDrawingDoc.Sheets.Count = 1 Then
+			Continue For 
+		End If
+		
+        oT = oTM.StartTransaction(oDoc, "Update Drawing Note")
+
+		question = MessageBox.Show("Do you want to copy to " & oDoc.DisplayName & "?", "iLogic Question",MessageBoxButtons.YesNo,MessageBoxIcon.Question)
+
+        'Set condition based On answer
+        If Not question = vbYes Then
+			Continue For
+		End If
+		
+		Dim acbe As AutoCADBlockDefinitionsEnumerator
+		
+		Try
+			acbe = oDrawingDoc.AutoCADBlockDefinitions.AddFromFile(dwgFullFileName, oACADBlockDefs, True)
+		Catch ex As Exception
+			MsgBox("error adding to " & oDoc.DisplayName)
+			MsgBox(oACADBlockDefs.Count & vbNewLine)
+			MsgBox(ex.Message)
+		End Try
+		
+		
+		For Each oSheet As Sheet In oDrawingDoc.Sheets
+			
+			If oSheet.Name = sActiveSheetName And oDrawingDoc.DisplayName = sActiveDocName Then
+				Continue For 
+			End If	
+			
+			Dim oACADBlockDef As AutoCADBlockDefinition
+			Dim oACADBlockPos As Point2d
+			
+			Try
+				For i = 1 To oACADBlocksToMove.Count    ' Be Careful, Object collection is 1 based, ArrayList is 0 based
+					oACADBlockDef = acbe.Item(i)
+					oACADBlockPos = ooACADBlocksToMovesToMovePosition.Item(i)
+					
+					'MsgBox(oACADBlockDef.Name & oACADBlockPos.X )
+					
+					oSheet.AutoCADBlocks.Add(oACADBlockDef, oACADBlockPos)
+					
+					oSheet.Update()
+				Next
+			Catch ex As Exception
+				MsgBox("error adding to " & oDoc.DisplayName)
+				MsgBox(oACADBlocksToMove.Count & vbNewLine & _
+				ooACADBlocksToMovesToMovePosition.Count & vbNewLine)
+				MsgBox(ex.Message)
+			End Try
+			
+		Next
+		
+		oT.End()
+		oDoc.Update()
+		
+		items += 1
+	Else
+		
+    End If
+Next
+
+MsgBox("Copied " & oACADBlocksToMove.Count & " notes to " & items & " drawings")

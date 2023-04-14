@@ -1,0 +1,96 @@
+﻿'Author: Bart.Den.Otter
+'https://forums.autodesk.com/t5/inventor-forum/aligning-views-to-a-line/td-p/7186354
+Sub Main()
+
+Dim oDoc As DrawingDocument
+oDoc = ThisDoc.Document
+
+Dim oCurve1, oCurve2 As DrawingCurveSegment
+oCurve1 = GetCurve1(oDoc)
+oCurve2 = GetCurve2(oDoc)
+
+Dim oView1, oView2 As DrawingView 
+oView1 = oCurve1.Parent.Parent
+oView2 = oCurve2.Parent.Parent
+
+Dim Curve1Point1, Curve1Point2, Curve2Point1, Curve2Point2, View1Point, View2Point As Point2d
+Curve1Point1=oCurve1.StartPoint
+Curve1Point2=oCurve1.EndPoint
+Curve2Point1=oCurve2.StartPoint
+Curve2Point2=oCurve2.EndPoint
+
+If oView1.Name <> oView2.Name Then
+	MessageBox.Show("Select lines from same view", "Align view error", MessageBoxButtons.OK, MessageBoxIcon.Hand, MessageBoxDefaultButton.Button1)
+	Exit Sub
+End If
+
+msgbox("test")
+
+If (Round((Curve1Point1.X - Curve1Point2.X) * 1e8) = 0 And Round((Curve2Point1.X - Curve2Point2.X) * 1e8) = 0) Then
+	Logger.Info("Shaft is horizontal")
+	
+	MoveView = Curve1Point1.X - Curve2Point1.X
+	oView2Point = oView2.Position
+	oView2Point.X = oView2Point.X + MoveView
+	'oView2.Position = oView2Point
+Else If (Round((Curve1Point1.Y - Curve1Point2.Y) * 1e8) = 0 And Round((Curve2Point1.Y - Curve2Point2.Y) * 1e8) = 0) Then
+	Logger.Info("Shaft is vertical")
+	
+	MoveView = Curve1Point1.Y - Curve2Point1.Y
+	oView2Point = oView2.Position
+	oView2Point.Y = oView2Point.Y + MoveView
+	'oView2.Position = oView2Point
+Else
+	MessageBox.Show("Lines are not paralell to each other", "Shaft break error", MessageBoxButtons.OK, MessageBoxIcon.Hand, MessageBoxDefaultButton.Button1)
+	MsgBox(Curve1Point1.Y - Curve1Point2.Y)
+	MsgBox(Curve2Point1.Y - Curve2Point2.Y)
+	Exit Sub
+End If
+
+
+
+'d1 = distance(pt1, pt2)
+'ang = angle(pt1, pt2)
+
+'pt3 = polar(pt1, (ang - (pi/2)), (d1/6)) '-90deg
+'pt4 = polar(pt3, ang, d1)
+'cp1 = polar(pt3, ang, (d1/2)
+
+'pt5 = polar(pt1, (ang + (pi/2)), (d1/6)) '+90deg
+'pt6 = polar(pt5, ang, d1) 
+'cp2 = polar(pt5, ang, (d1/2)
+'cp3 = polar(pt1, ang, (d1/2)
+
+Dim dsketch = oView1.Sketches.Add()
+dsketch.Name = "sketch_Shaft_Break"
+Dim startColor As Color = ThisApplication.TransientObjects.CreateColor(255, 0, 0)
+Dim endColor As Color = ThisApplication.TransientObjects.CreateColor(0,255,0)
+dsketch.Edit()
+
+
+
+Dim sc1 As SketchCircle = dsketch.SketchCircles.AddByCenterRadius(Curve1Point1, 0.5)
+sc1.OverrideColor = startColor
+Dim sc2 As SketchCircle = dsketch.SketchCircles.AddByCenterRadius(Curve1Point2, 0.5)
+sc2.OverrideColor = endColor
+Dim sc3 As SketchCircle = dsketch.SketchCircles.AddByCenterRadius(Curve2Point1, 0.5)
+sc3.OverrideColor = startColor
+Dim sc4 As SketchCircle = dsketch.SketchCircles.AddByCenterRadius(Curve2Point2, 0.5)
+sc4.OverrideColor = endColor
+
+dsketch.ExitEdit()
+ThisApplication.ActiveView.Update()
+
+End Sub
+ 
+Private Function GetCurve1(ByVal oDoc As DrawingDocument) As DrawingCurveSegment
+Dim Curve As DrawingCurveSegment
+Curve = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kDrawingCurveSegmentFilter, "Select first line to align")
+Return Curve
+End Function
+ 
+Private Function GetCurve2(ByVal oDoc As DrawingDocument) As DrawingCurveSegment
+Dim Curve As DrawingCurveSegment
+Curve = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kDrawingCurveSegmentFilter, "Select second line to align")
+Return Curve
+End Function

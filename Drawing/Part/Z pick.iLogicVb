@@ -1,0 +1,59 @@
+﻿Dim s = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kDrawingDefaultFilter, "pick part")
+
+Logger.Info("{0}" & vbCrLf & vbTab & "--> ObjectTypeEnum.{1}", {TypeName(s), [Enum].GetName(GetType(ObjectTypeEnum), s.Type) })
+
+Logger.Debug("picked a drawing curvesegment")
+Dim d As DrawingCurveSegment = s
+
+Dim p = d.Parent.ModelGeometry
+
+Logger.Debug("got model geometry")
+
+If p Is Nothing Then
+	Logger.Error("no model geo?")
+	return
+End If
+
+Dim z As WorkAxis
+Dim cop As ComponentOccurrenceProxy
+Dim copname As String
+
+If TypeOf p Is Edge Then
+	Dim edgeGeo As Edge = p
+	Logger.Debug("found an edge")
+	Dim part = edgeGeo.Parent.Parent
+	Logger.Info("{0}" & vbCrLf & vbTab & "--> ObjectTypeEnum.{1}", {TypeName(part), [Enum].GetName(GetType(ObjectTypeEnum), part.Type) })
+	If TypeOf part Is ComponentOccurrenceProxy Then
+		Logger.Debug("found part def")
+		cop = part
+		copname = cop.Name
+		Dim pcd As PartComponentDefinition = cop.Definition
+		
+		
+		z = pcd.WorkAxes(3)
+	End If
+End If
+
+If z Is Nothing Then
+	Logger.Error("nothing?")
+	Return
+End if
+
+Dim part_bn As NativeBrowserNodeDefinition = ThisDoc.Document.BrowserPanes.GetNativeBrowserNodeDefinition(cop.ContextDefinition)
+Dim bn As NativeBrowserNodeDefinition = ThisDoc.Document.BrowserPanes.GetNativeBrowserNodeDefinition(z)
+Dim tn As BrowserNode = ThisDoc.Document.BrowserPanes.ActivePane.TopNode
+Logger.Info("Found {0} nodes matching",{tn.AllReferencedNodes(part_bn).Count})
+Dim prn As BrowserNode = tn.AllReferencedNodes(part_bn).Item(1)
+Logger.Info("Found {0} nodes matching",{prn.AllReferencedNodes(bn).Count})
+Dim axn As BrowserNode = prn.AllReferencedNodes(bn).Item(1)
+
+Logger.Info("{0}", {axn.FullPath })
+
+
+ThisDoc.Document.SelectSet.Clear()
+Logger.Debug("try to select")
+axn.EnsureVisible()
+axn.DoSelect()
+'ThisDoc.Document.SelectSet.Select(axn)
+
+ThisApplication.CommandManager.ControlDefinitions("DrawingIncludeIndividualWorkFeaturesCtxCmd").Execute()

@@ -1,0 +1,140 @@
+﻿' Author: <J Robertson>jessrobe@gmail.com
+' Date: 23/09/2020
+' ================================================
+' Does Find/Replace on General Tables, asks for dry run first
+Class ThisRule
+Dim items as Integer = 0 
+
+Sub Main()
+
+Dim oDocs As Documents = ThisApplication.Documents
+Dim oDoc As Document
+Dim oDrawingDoc As DrawingDocument
+
+Dim oTG As TransientGeometry
+oTG = ThisApplication.TransientGeometry
+
+Dim oTM As TransactionManager = ThisApplication.TransactionManager
+Dim oT As Transaction
+
+Dim stampName as string = "Copy of prelimchkincom"
+
+'Dim items As Integer = 0
+
+Dim sTags() As String = New System.String() {}
+Dim sValues() As String = New System.String() {}
+
+Dim dRun As Boolean
+dryRunInput = MessageBox.Show("Dry Run?", "Dry Run?", MessageBoxButtons.YesNoCancel)
+If dryRunInput = DialogResult.Cancel Then
+	Logger.Info("Cancelled, aborting.....")	
+	Return
+Else If dryRunInput = DialogResult.No
+	dRun = False
+Else
+	dRun = True
+End If
+
+Dim sOldDrawingNum As String
+Dim sNewDrawingNum As String
+sOldDrawingNum = InputBox("Enter Old Text", "OLD TEXT", "")
+sNewDrawingNum = InputBox("Enter New Text", "NEW TEXT", "")
+
+
+Logger.Info("Find String ""{0}""",sOldDrawingNum)
+Logger.Info("and Replace with ""{0}""",sNewDrawingNum)
+
+Dim sCellVal As String
+
+For Each oDoc In ThisApplication.Documents.VisibleDocuments
+    If oDoc.DocumentType = 12292 Then '12292 = drawing doc
+		oDrawingDoc = oDoc
+        oT = oTM.StartTransaction(oDoc, "Replace Text Partslist")
+
+		For Each oSheet As Sheet In oDrawingDoc.Sheets
+			
+			If oSheet.CustomTables.Count = 0 Then
+				Continue For
+			End If
+			
+			For Each ctable As CustomTable In oSheet.CustomTables		
+				Logger.Info("Run Sub:FindReplaceCustomTable on {0}", ctable.Title)
+				FindReplaceCustomTable(ctable, sOldDrawingNum, sNewDrawingNum, dryRun:=dRun)
+			Next
+			
+		Next
+		
+		oT.End()
+		oDoc.Update()
+		
+	Else
+		
+    End If
+Next
+
+Logger.Info("Found {0} items to change", items)
+MsgBox("Changed " & items & " places")
+
+End Sub
+
+Sub FindReplaceCustomTable(oCT As CustomTable, f As String, r As String, Optional exact As Boolean = False, Optional dryRun As Boolean = True)
+	For Each oCol as Column in oCT.Columns
+		Logger.Info("Checking Column Titles")
+		if FindReplaceCell(oCol,f,r,exact,dryRun, header:=true) Then
+			items += 1
+		end if
+	Next
+
+	For Each oRow As Row In oCT.Rows
+		Logger.Info("New Row")
+		For Each oCell As Cell In oRow
+			if FindReplaceCell(oCell,f,r,exact,dryRun) Then
+				items += 1
+			end if
+		Next
+	Next	
+End Sub
+
+Function FindReplaceCell(oC As Object, f As String, r As String, Optional exact As Boolean = False, Optional dryRun As Boolean = True, optional header as boolean = false) as Boolean
+	Dim newCellVal As String
+	Dim exValue as string	
+	if header Then
+		exValue = oC.Title
+	else
+		exValue = oC.Value
+	end if
+		
+	Logger.Info("Cell Value: ""{0}""",exValue)
+	If Not exValue.Contains(f)
+		Logger.Info("Does not contain ""{0}"", continuing...",f)
+		return false
+	End If
+
+	If not header Then
+		if Not oC.Static Then
+			Logger.Info("Cell is not static, continuing...")
+			return false
+		end if
+	End If
+	
+	If exact And Not exValue.Equals(f)
+		Logger.Info("Cell is not exactly {0}, continuing...",f)
+		return false			
+	End If
+
+	newCellVal = exValue.Replace(f, r)
+	
+	If Not dryRun and header Then
+		Logger.Info("Replacing Title {0} with {1}",f,r)
+		oC.Title = newCellVal
+	else if Not dryRun
+		Logger.Info("Replacing Value {0} with {1}",f,r)
+		oC.Value = newCellVal
+	else
+		Logger.Info("Dry Run, Replacing Value {0} with {1}",f,r)
+	end if
+	
+	return true
+end Function
+
+end class

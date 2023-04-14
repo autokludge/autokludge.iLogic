@@ -1,0 +1,72 @@
+﻿Dim oDocs As Documents = ThisApplication.Documents
+Dim oDoc As Document
+Dim oDrawingDoc As DrawingDocument
+
+Dim oTG As TransientGeometry
+oTG = ThisApplication.TransientGeometry
+
+Dim oTM As TransactionManager = ThisApplication.TransactionManager
+Dim oT As Transaction
+
+Dim items As Integer = 0
+
+Dim sTags() As String = New System.String() {}
+Dim sValues() As String = New System.String() {}
+
+Dim settings As String = "PRINTER SETTINGS:" & vbCrLf & "Printer: Nitro PDF (my documents)" & vbCrLf & "Size: A3" & vbCrLf & "Range: Current Sheet"
+
+'MsgBox(settings, MsgBoxStyle.OkOnly, "PRINTER SETTINGS")
+
+
+Dim total_steps = ThisApplication.Documents.VisibleDocuments.Count
+Dim pb As Inventor.ProgressBar = ThisApplication.CreateProgressBar(false, total_steps, "Printing Documents")
+pb.Message = "Printing document"
+pb.UpdateProgress()
+
+System.Threading.Thread.CurrentThread.Sleep(2000)
+
+For Each oDoc In ThisApplication.Documents.VisibleDocuments
+    If oDoc.DocumentType = 12292 Then '12292 = drawing doc
+		oDrawingDoc = oDoc
+		oDrawingDoc.Activate()
+		
+        oT = oTM.StartTransaction(oDoc, "Update Sheet Revision")
+
+		For Each oSheet As Sheet In oDrawingDoc.Sheets
+				oSheet.Activate()
+				'hope this works
+				Try				
+					Dim DPM As DrawingPrintManager = oDrawingDoc.PrintManager
+					
+					DPM.Printer = "Nitro PDF Creator (Pro 12)"
+					DPM.PaperSize = PaperSizeEnum.kPaperSizeA3
+					DPM.ScaleMode = PrintScaleModeEnum.kPrintBestFitScale
+					DPM.PrintRange = PrintRangeEnum.kPrintCurrentSheet
+					DPM.SubmitPrint()
+
+					
+					'System.Threading.Thread.CurrentThread.Sleep(7000)
+					
+					items += 1
+				Catch
+					MsgBox("failure")
+				End Try
+				Exit For 'ONLY SHEET 1
+		Next
+		
+		oT.End()
+		oDoc.Update()
+	Else
+		
+    End If
+	pb.UpdateProgress()
+Next
+
+System.Threading.Thread.CurrentThread.Sleep(2000)
+pb.Close()
+'MsgBox("Printed " & items & " drawings")
+
+'oPath = "%home%\Documents"
+'Dim Proc As String = "Explorer.exe"
+'Dim Args As String = ControlChars.Quote & oPath & ControlChars.Quote
+'Process.Start(Proc, Args)

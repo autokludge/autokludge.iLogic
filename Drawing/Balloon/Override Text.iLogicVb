@@ -1,0 +1,31 @@
+﻿If Not ThisDoc.Document.DocumentType = DocumentTypeEnum.kDrawingDocumentObject Then
+	Logger.Error("This rule only runs from drawing documents")
+	Return
+End If
+Dim drg As DrawingDocument = ThisDoc.Document
+
+Dim pick As Object
+If ThisDoc.Document.SelectSet.Count > 0 Then
+	pick = ThisDoc.Document.SelectSet(1)
+Else
+	pick = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kDrawingBalloonFilter, "Pick Balloon")
+End If
+
+Dim balloon As Balloon
+If TypeOf pick Is Balloon Then
+	balloon = pick
+Else
+	Logger.Error("This rule only runs from drawing documents")
+	Return
+End If
+
+Dim text As String
+While True
+	text = InputBox("Text = ", "Balloon Text", balloon.BalloonValueSets(1).ItemNumber)
+	If String.ReferenceEquals(text, String.Empty) Then
+		Return
+	End If
+	balloon.BalloonValueSets(1).OverrideValue = text.ToUpper()
+	balloon = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kDrawingBalloonFilter, "Pick Balloon")
+	if balloon is nothing then return
+End While

@@ -1,0 +1,19 @@
+﻿Dim oDrawDoc As DrawingDocument = ThisDrawing.Document
+Dim oSheets As Sheets
+Dim oViews As DrawingViews
+
+oSheets = oDrawDoc.Sheets
+For Each oSheet In oSheets
+	oViews = oSheet.DrawingViews
+	For Each oView As DrawingView In oViews
+		oView.ShowLabel = False
+		oView.Suppressed = True
+		oDrawDoc.Update()
+		
+		oView.ShowLabel = True
+		oView.Suppressed = False
+		oDrawDoc.Update()
+		
+		'MsgBox(oView.Label.FormattedText)
+	Next
+Next

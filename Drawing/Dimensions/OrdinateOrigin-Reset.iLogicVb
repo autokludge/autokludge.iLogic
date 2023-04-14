@@ -1,0 +1,28 @@
+﻿' Set a reference to the active drawing document
+Dim oDoc As DrawingDocument
+oDoc = ThisDoc.Document
+
+' Set a reference to the active sheet
+Dim oSheet As Sheet
+oSheet = oDoc.ActiveSheet
+
+Dim oSelectSet As SelectSet
+oSelectSet = oDoc.SelectSet
+
+Dim oDrawView As DrawingView
+Dim oOriginInd As OriginIndicator
+Dim selection As Object
+' Iterate over all dimensions in the drawing and
+' center them if they are linear or angular.
+
+For Each selection In oSelectSet
+    If TypeOf selection Is DrawingView Then
+	    oDrawView = selection
+        
+		oOriginInd = oDrawView.OriginIndicator
+		
+		oOriginInd.RelativeX = 0
+		oOriginInd.Relativey = 0
+		
+    End If
+Next

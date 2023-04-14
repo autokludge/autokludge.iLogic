@@ -1,0 +1,120 @@
+﻿Dim oDocs As Documents = ThisApplication.Documents
+Dim oDoc As Document
+Dim oDrawingDoc As DrawingDocument
+
+Dim oTG As TransientGeometry
+oTG = ThisApplication.TransientGeometry
+
+Dim oTM As TransactionManager = ThisApplication.TransactionManager
+Dim oT As Transaction
+
+Dim items As Integer = 0
+
+Dim oDNote As GeneralNote
+Dim oSelectSet As SelectSet
+oSelectSet = ThisApplication.ActiveDocument.SelectSet
+
+Dim sActiveDocName As String
+Dim sActiveSheetName As String
+sActiveDocName = ThisApplication.ActiveDocument.DisplayName
+Dim dDoc As DrawingDocument = ThisApplication.ActiveDocument
+sActiveSheetName = dDoc.ActiveSheet.Name
+
+Dim oNotesToMove As ObjectCollection
+Dim oNotesToMoveStyle As ObjectCollection
+Dim oNotesToMovePosition As ObjectCollection
+Dim oNotesToMoveWS As ObjectCollection
+Dim oNotesToMoveHJ As New ArrayList '0 index
+Dim oNotesToMoveVJ As New ArrayList
+Dim oNotesToMoveLS As New ArrayList
+Dim oNotesToMoveLST As New ArrayList
+oNotesToMove = ThisApplication.TransientObjects.CreateObjectCollection '1 index
+oNotesToMoveStyle = ThisApplication.TransientObjects.CreateObjectCollection
+oNotesToMovePosition = ThisApplication.TransientObjects.CreateObjectCollection
+oNotesToMoveWS = ThisApplication.TransientObjects.CreateObjectCollection
+'oNotesToMoveHJ = ThisApplication.TransientObjects.CreateObjectCollection
+'oNotesToMoveVJ = ThisApplication.TransientObjects.CreateObjectCollection
+
+If oSelectSet.Count = 0 Then
+	MsgBox("none selected")
+	return
+End If
+
+For Each selection In oSelectSet
+    If TypeOf selection Is GeneralNote Then
+	    oDNote = selection
+		oNotesToMove.Add(oDNote.FormattedText)
+		oNotesToMoveStyle.Add(oDNote.TextStyle)
+		oNotesToMovePosition.Add(oDNote.Position)
+		oNotesToMoveWS.Add(oDNote.WidthScale.ToString)
+		'msgbox(oDNote.HorizontalJustification.ToString)
+		oNotesToMoveHJ.Add(oDNote.HorizontalJustification.ToString)
+		oNotesToMoveVJ.Add(oDNote.VerticalJustification.ToString)
+		oNotesToMoveLST.Add(oDNote.LineSpacingType)
+		oNotesToMoveLS.Add(oDNote.LineSpacing)		
+    End If
+Next
+
+'msgbox("test")
+
+Dim oMoveStr As String
+Dim oMove As Double
+oMoveStr = InputBox("Enter Desired Position", "Position", "5.5")
+oMove = CDbl(oMoveStr)/10
+
+
+oT = oTM.StartTransaction(ThisApplication.ActiveDocument, "Update Drawing Note")
+oDoc = ThisApplication.ActiveDocument
+
+For Each oSheet As Sheet In oDoc.Sheets
+	
+	'MsgBox("test")
+	
+	Dim oGeneralNotes As GeneralNotes = oSheet.DrawingNotes.GeneralNotes
+	Dim p1 As Point2d
+	Dim ft As String
+	Dim ts
+	Dim ws
+	Dim hj
+	Dim vj
+				
+	Try
+		For i = 1 To oNotesToMove.Count    ' Be Careful, Object collection is 1 based, ArrayList is 0 based
+			p1 = oNotesToMovePosition.Item(i)
+			ft = oNotesToMove.Item(i)
+			ws = oNotesToMoveWS.Item(i)
+			hj = oNotesToMoveHJ(i-1)
+			vj = oNotesToMoveVJ(i-1)
+			
+			p1.Y = p1.Y+oMove
+
+			Dim gn = oGeneralNotes.AddFitted(p1, ft)
+			gn.WidthScale = ws
+			
+			gn.LineSpacingType = oNotesToMoveLST(i-1)
+			gn.LineSpacing = oNotesToMoveLS(i-1)
+
+			'gn.HorizontalJustification = DirectCast([Enum].Parse(GetType(HorizontalTextAlignmentEnum), hj), HorizontalTextAlignmentEnum)
+			'gn.VerticalJustification = DirectCast([Enum].Parse(GetType(VerticalTextAlignmentEnum), vj), VerticalTextAlignmentEnum)
+			'gn.Position = p1
+		Next
+	Catch ex As Exception
+		MsgBox("error adding to " & oDoc.DisplayName)
+		MsgBox(oNotesToMovePosition.Count & vbNewLine & _
+		oNotesToMove.Count & vbNewLine & _
+		oNotesToMoveWS.Count & vbNewLine & _
+		oNotesToMoveHJ.Count & vbNewLine & _
+		oNotesToMoveVJ.Count & vbNewLine & _
+		oNotesToMoveLST.Count & vbNewLine & _
+		oNotesToMoveLS.Count & vbNewLine )
+		MsgBox(ex.Message)
+	End Try
+			
+	
+Next
+
+oT.End()
+oDoc.Update()
+
+
+MsgBox("Copied " & oNotesToMove.Count & " notes")

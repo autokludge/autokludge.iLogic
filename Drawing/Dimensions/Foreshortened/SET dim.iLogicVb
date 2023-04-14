@@ -1,0 +1,37 @@
+﻿Sub Main()
+	
+	
+Dim oSelectSet As SelectSet = ThisDoc.Document.SelectSet
+	
+'Are things selected?
+If oSelectSet.Count < 1 Then
+	MsgBox("Select Foreshortend Dimension First")
+	Return
+End If
+
+Dim firstSel = oSelectSet(1)	
+Dim oDrawingDim As LinearGeneralDimension
+If TypeOf firstSel Is LinearGeneralDimension Then
+	oDrawingDim = firstSel
+End If
+
+If oDrawingDim IsNot Nothing And oDrawingDim.DimensionType <> DimensionTypeEnum.kLinearForeshortenedDimensionType Then
+	MsgBox("Select Linear Foreshortened Dimension")
+	Return
+End If
+
+Dim dimValue As Integer
+userInput_dimValue = InputBox("Dimension Value (mm) = ", "Dimension?", -1)
+dimValue = CInt(userInput_dimValue)
+
+If dimValue < 0 Then
+	MsgBox("Positive Dimension Value Required")
+	Return
+End If
+
+orideDim = ThisApplication.UnitsOfMeasure.GetValueFromExpression(dimValue, "mm")
+oDrawingDim.OverrideModelValue = orideDim
+
+oDrawingDim.SecondArrowheadType = ArrowheadTypeEnum.kAsStyleArrowheadType
+
+End Sub

@@ -1,0 +1,35 @@
+﻿Dim oDrawDoc As DrawingDocument = ThisDrawing.Document
+Dim oSheet As Sheet
+Dim oSheets As Sheets
+'Dim oView As DrawingView
+Dim oViews As DrawingViews
+Dim oSizeStr As String
+Dim oSize As Double
+
+
+
+
+oSheets = oDrawDoc.Sheets
+For Each oSheet In oSheets
+	oViews = oSheet.DrawingViews
+	For Each oView As DrawingView In oViews
+		If oView.ViewType = DrawingViewTypeEnum.kDetailDrawingViewType Then
+			Dim oDetView As DetailDrawingView 
+			oDetView = oView
+			If oDetView.CircularFence Then
+				
+				Dim msg = "Fence Radius" + oDetView.FenceRadius.ToString
+				MsgBox(msg)
+				
+				oSizeStr = InputBox("Enter Desired Size", "Size", "")
+				If Not IsNumeric(oSizeStr) Then
+					Return
+				Else
+					oSize = CDblAny(oSizeStr)
+				End If
+				
+				oDetView.FenceRadius = oSize
+			End If
+		End If
+	Next
+Next

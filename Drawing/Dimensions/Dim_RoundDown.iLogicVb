@@ -1,0 +1,32 @@
+﻿If ThisDoc.Document.DocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+	Logger.Info("Rule only runs in drawing")
+	Return
+End If
+
+Dim drg As DrawingDocument = ThisDoc.Document
+
+'Dim selection As Object
+' Iterate over all dimensions in the drawing and
+' center them if they are linear or angular.
+
+For Each selection In drg.SelectSet
+    If Not TypeOf selection Is LinearGeneralDimension And _
+       Not TypeOf selection Is AngularGeneralDimension Then
+	   	Return
+   End If
+	    Dim oDrawingDim As DrawingDimension = selection
+		'oDrawingDim.Precision = 0
+        'precision = oDrawingDim.Precision
+		'rounding = 2 * Pow(10, (0-precision-1))
+		model_dim = oDrawingDim.ModelValue
+		suggested_dim = Floor(model_dim* 10)  '(Round(modelDim / rounding)) * rounding * 10
+		
+		'dim_prompt_result = InputBox("NOM VALUE= ", "VALUE?", suggested_dim)
+		Dim override_dim As Double
+		'override_dim = CDbl(dim_prompt_result) / 10
+		override_dim = suggested_dim / 10
+		
+		oDrawingDim.OverrideModelValue = override_dim
+		
+		'oDrawingDim.Text.FormattedText="<DimensionValue/>"
+Next

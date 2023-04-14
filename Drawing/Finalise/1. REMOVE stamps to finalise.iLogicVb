@@ -1,0 +1,42 @@
+﻿Dim blocks_stamps_to_remove As List(Of String) = New List(Of String)(
+	{
+		"PRELIM",
+		"ISSUED FOR APPROVAL",
+		"ISSUED FOR REVIEW",
+		"CHECK_PRINT",
+		"JR_CHECKPRINT"
+	})
+
+Dim items As Integer = 0
+
+For Each doc As Document In ThisApplication.Documents.VisibleDocuments
+	If doc.DocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+		Continue For
+	End If
+	Dim drg_doc As DrawingDocument = doc
+	
+    Dim transaction As Transaction = ThisApplication.TransactionManager.StartTransaction(doc, "Remove Prelim Stamp")
+
+	For Each oSheet As Sheet In drg_doc.Sheets
+		For Each oAutoCADBlock As AutoCADBlock In oSheet.AutoCADBlocks	
+			If blocks_stamps_to_remove.Any(
+					Function(s) oAutoCADBlock.Name.ToUpper().Contains(s.ToUpper())) Then
+				items += 1
+				oAutoCADBlock.Delete()
+			End If
+		Next
+		
+		For Each oSkSymbol As SketchedSymbol In oSheet.SketchedSymbols
+			If blocks_stamps_to_remove.Any(
+					Function(s) oSkSymbol.Name.ToUpper().Contains(s.ToUpper())) Then
+				items += 1
+				oSkSymbol.Delete
+			End If
+		Next
+	Next
+	
+	Transaction.End()
+	doc.Update()
+Next
+
+MsgBox("Changed " & items & " places")

@@ -1,0 +1,74 @@
+﻿Sub Main()
+	
+If ThisDoc.Document.DocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+	MsgBox("only runs in drawing environment")
+	Return
+End If
+
+Dim dDoc As DrawingDocument = ThisDoc.Document
+Dim oSelectSet As SelectSet = ThisDoc.Document.SelectSet
+	
+'Are things selected?
+If oSelectSet.Count < 1 Then
+	MsgBox("Select Linear Dimension First")
+	Return
+End If
+
+Dim firstSel = oSelectSet(1)	
+Dim oDrawingDim As GeneralDimension
+If TypeOf firstSel Is GeneralDimension Then
+	oDrawingDim = firstSel
+End If
+
+If oDrawingDim Is Nothing Then
+	MsgBox("Select Linear Dimension")
+	Return
+End If
+
+userInput_dimPlusValue = InputBox("tolerance upper limit (mm) = ", "upper tolerance?", 0) + " mm"
+userInput_dimMinusValue = InputBox("tolerance lower limit (mm) = ", "lowr tolerance?", 0) + " mm"
+Dim dimDecimalPlacesValue As Integer
+userInput_dimDecimalPlacesValue = InputBox("Decimal places = ", "Decimal Places?", oDrawingDim.Precision)
+
+Try
+	dimDecimalPlacesValue = CInt(userInput_dimDecimalPlacesValue)
+Catch
+	MsgBox("Please only enter numbers")
+	Return
+End Try
+
+If dimDecimalPlacesValue < 0 Then
+	MsgBox("Positive decimal places please")
+	Return
+End If
+
+'Check if style has options required
+Dim oDDS = oDrawingDim.Style
+Logger.Info("Dimension Style IncludedZeroDisplay = {0}", oDDS.IncludedZeroDisplay.ToString)
+Logger.Info("Dimension Style TrailingZeroDisplay = {0}", oDDS.TrailingZeroDisplay.ToString)
+
+'required to properly show trailing zeros
+If Not (oDDS.IncludedZeroDisplay And oDDS.TrailingZeroDisplay) Then
+	Dim ilogicToleranceStyle As DimensionStyle
+	Try 
+		Logger.Info("Try to retreive ilogic_tolerance dimension style......")
+		ilogicToleranceStyle = dDoc.StylesManager.DimensionStyles("ilogic_tolerance")
+		Logger.Info("Success.")
+	Catch
+		Logger.Info("Failed. Create ilogic_tolerance dimension style from existing.")
+		ilogicToleranceStyle = oDDS.Copy("ilogic_tolerance")
+		ilogicToleranceStyle.TrailingZeroDisplay = True
+		ilogicToleranceStyle.IncludedZeroDisplay = True
+	End Try
+	
+	Logger.Info("Setting dimension style")
+	oDrawingDim.Style = ilogicToleranceStyle
+End If
+
+Logger.Info("Dimension Precision = {0}",oDrawingDim.Precision)
+oDrawingDim.Precision = dimDecimalPlacesValue
+
+Dim oDDTol = oDrawingDim.Tolerance
+oDDTol.SetToDeviation(userInput_dimPlusValue, userInput_dimMinusValue)
+
+End Sub

@@ -1,0 +1,22 @@
+﻿If ThisDoc.Document.DocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+	Return
+End If
+
+Dim auto = ThisApplication.TransientObjects.CreateColor(0, 0, 0)
+auto.ColorSourceType = ColorSourceTypeEnum.kAutomaticColorSource
+
+Dim ss = ThisDrawing.Document.SelectSet
+For Each sel In ss
+	If TypeOf sel Is DrawingNote Then
+		Dim dn As DrawingNote = sel
+		dn.Color.ColorSourceType = ColorSourceTypeEnum.kAutomaticColorSource
+	End If
+	If TypeOf sel Is LeaderNote Then
+		Dim ln As LeaderNote = sel
+		Logger.Info(ln.Color.ColorSourceType)
+		Logger.Info("r{0}g{1}b{2}", {ln.Color.Red, ln.Color.Green, ln.Color.Blue })
+		ln.Color = auto
+		Logger.Info(ln.Color.ColorSourceType)
+		Logger.Info("r{0}g{1}b{2}", {ln.Color.Red, ln.Color.Green, ln.Color.Blue })
+	End If
+Next

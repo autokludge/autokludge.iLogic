@@ -1,0 +1,84 @@
+﻿' Set a reference to the active drawing document
+Dim oDoc As DrawingDocument
+oDoc = ThisDoc.Document
+
+' Set a reference to the active sheet
+Dim oSheet As Sheet
+oSheet = oDoc.ActiveSheet
+
+Dim oSelectSet As SelectSet
+oSelectSet = oDoc.SelectSet
+
+If oSelectSet.Count < 1 Then
+	Dim hd = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kDrawingDimensionFilter, "Pick a hole dimension")
+	oDoc.SelectSet.Select(hd)
+End If
+
+Dim other_objects = False
+
+Dim selection As Object
+' Iterate over all dimensions in the drawing and
+' center them if they are linear or angular.
+
+'4 HOLES - <DimensionValue/><Br/><StyleOverride Bold='True' Italic='True'>TOP FLANGE ONLY</StyleOverride>
+
+For Each selection In oSelectSet
+    If TypeOf selection Is DiameterGeneralDimension Then
+	    Dim oDrawingDim As DrawingDimension = selection
+		
+		Dim prompt As String = "No of Holes= " & vbNewLine & "<>TFO          Top Flange Only" & vbNewLine & "<>BFO          Bottom Flange Only" & vbNewLine & "<>BF             Both Flanges" & vbNewLine & "<>S20           Slot 20 LG"
+		myparam = InputBox(prompt, "Holes?", 1)
+		Dim btf = myparam.IndexOf("bfo", StringComparison.OrdinalIgnoreCase) >= 0 
+		myparam = Replace(myparam, "bfo", "", 1, , CompareMethod.Text)
+		Dim tf = myparam.IndexOf("tfo", StringComparison.OrdinalIgnoreCase) >= 0 
+		myparam = Replace(myparam, "tfo", "", 1, , CompareMethod.Text)
+		Dim bf = myparam.IndexOf("bf", StringComparison.OrdinalIgnoreCase) >= 0 
+		myparam = Replace(myparam, "bf", "", 1, , CompareMethod.Text)
+		Dim s = myparam.IndexOf("s", StringComparison.OrdinalIgnoreCase) >= 0 
+		Dim lg = ""
+		If s Then
+			lg = myparam.Substring(myparam.IndexOf("s", StringComparison.OrdinalIgnoreCase)+1)
+			myparam = Left(myparam, myparam.IndexOf("s", StringComparison.OrdinalIgnoreCase))
+		End If
+
+		Dim num_holes As Integer
+		num_holes = CInt(myparam)
+
+		'degrees in radians
+		Dim ft As String
+		If num_holes > 1 Then
+			ft = "" & num_holes & " HOLES - <DimensionValue/>"
+		Else
+			ft = "<DimensionValue/> HOLE"
+		End If
+		If s Then
+			If num_holes > 1 Then
+				ft = "" & num_holes & " SLOTTED HOLES<Br/><DimensionValue/> x " & lg & " LG"
+			Else
+				ft = "SLOTTED HOLE<Br/><DimensionValue/> x " & lg & " LG"
+			End If
+		End If
+				
+		If myparam > 0 Then					
+			oDrawingDim.Text.FormattedText = ft
+			
+			'oDrawingDim.HideValue=True
+		End If
+		
+		If tf Then
+			oDrawingDim.Text.FormattedText = oDrawingDim.Text.FormattedText & "<Br/><StyleOverride Bold='True' Italic='True'>TOP FLANGE ONLY</StyleOverride>"
+		End If
+		If btf Then
+			oDrawingDim.Text.FormattedText = oDrawingDim.Text.FormattedText & "<Br/><StyleOverride Bold='True' Italic='True'>BOTTOM FLANGE ONLY</StyleOverride>"
+		End If
+		If bf Then
+			oDrawingDim.Text.FormattedText = oDrawingDim.Text.FormattedText & "<Br/><StyleOverride Bold='True' Italic='True'>BOTH FLANGES</StyleOverride>"
+		End If
+	Else
+		other_objects = True
+    End If
+Next
+
+If other_objects Then
+	MsgBox("Other objects in selection. Are these dimensions or leader notes?")
+end if

@@ -1,0 +1,133 @@
+﻿Public Structure SketchedSymbolInfo
+	Public definition As Inventor.SketchedSymbolDefinition
+	'Public definition As String
+	Public instance As Inventor.SketchedSymbol
+	Public rotation As Double ' rads
+	Public position As Point2d
+	Public scale As Double
+	Public prompt_strings() As String
+End Structure
+
+Sub Main()
+
+'Needs to add sksym definition from library
+'prior to adding to drawing
+'Return
+
+
+If ThisApplication.ActiveDocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+	Logger.Warn("This only runs from a drawing")
+	Return
+End If 
+Dim active_drg As DrawingDocument = ThisApplication.ActiveDocument
+Dim selection As SelectSet = active_drg.SelectSet
+Dim sActiveDocName As String = active_drg.DisplayName
+Dim sActiveSheetName As String = active_drg.ActiveSheet.Name
+If selection.Count = 0 Then
+	Logger.Warn("none selected")
+	Return
+End If
+
+'create collection with information about all selected sketchedsymbols
+Dim sksym_to_move As List(Of SketchedSymbolInfo) = ProcessSelection(selection)
+
+Dim items As Integer = 0
+For Each oDoc In ThisApplication.Documents.VisibleDocuments
+	'skip non drawings
+    If oDoc.DocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+		Continue For
+	End If
+	oDrawingDoc = oDoc
+	
+	'skip original drawing sheet
+	If oDrawingDoc.DisplayName = sActiveDocName And oDrawingDoc.Sheets.Count = 1 Then
+		Continue For 
+	End If
+
+	'skip if user doesn't say yes for this drawing
+	question = MessageBox.Show("Do you want to copy to " & oDoc.DisplayName & "?", "iLogic Question",MessageBoxButtons.YesNo,MessageBoxIcon.Question)
+    If question <> vbYes Then
+		Continue For
+	End If
+	
+	Dim transaction As Transaction = ThisApplication.TransactionManager.StartTransaction(oDoc, "Update Drawing Note")
+	For Each target_sheet As Sheet In oDrawingDoc.Sheets
+		'skip original doc sheet
+		If target_sheet.Name = sActiveSheetName And oDrawingDoc.DisplayName = sActiveDocName Then
+			Continue For 
+		End If	
+		
+		
+		For Each ssi As SketchedSymbolInfo In sksym_to_move
+			Try
+				Dim unused As SketchedSymbol
+				Dim ssdef As SketchedSymbolDefinition = ssi.definition.CopyTo(oDrawingDoc, True)
+				
+				If ssi.prompt_strings Is Nothing Then
+					Logger.Info(".Add(*def*, *pos*, {0}, {1})", {ssi.rotation, ssi.scale })		
+					unused = target_sheet.SketchedSymbols.Add(ssdef, ssi.position, ssi.rotation, ssi.scale)		
+				Else
+					Logger.Info(".Add(*def*, *pos*, {0}, {1}, ps:len={2})", {ssi.rotation, ssi.scale, ssi.prompt_strings.Length })		
+					unused = target_sheet.SketchedSymbols.Add(ssdef, ssi.position, ssi.rotation, ssi.scale, ssi.prompt_strings)		
+				End If
+				
+				target_sheet.Update()
+			Catch ex As Exception
+				Logger.Error(ex.Message)
+			End Try
+		Next
+		
+		
+	Next
+	
+	transaction.End()
+	oDoc.Update()
+	
+	items += 1
+Next
+
+Logger.Info("Copied {0} notes to {1} drawings", {sksym_to_move.Count, items})
+
+End Sub
+
+Function ProcessSelection(sset As SelectSet) As List(Of SketchedSymbolInfo)
+	Dim sksym_to_move As List(Of SketchedSymbolInfo) = New List(Of SketchedSymbolInfo)
+	For Each selection In sset
+	    If Not TypeOf selection Is SketchedSymbol Then
+		    Continue For
+	    End If
+		Dim sk_symbol As SketchedSymbol = selection
+		Dim ssi = New SketchedSymbolInfo
+		'ssi.definition = sk_symbol.Definition
+		'TODO: 
+		Dim sksd = sk_symbol.Definition
+		ssi.definition = sksd
+		
+		ssi.instance = sk_symbol
+		ssi.rotation = sk_symbol.Rotation
+		ssi.position = sk_symbol.Position
+		ssi.scale = sk_symbol.Scale
+		Dim prompt_strings() As String
+		Dim ps_idx = 0
+		Dim sksdsk As DrawingSketch = sksd.Sketch
+		Dim sk_tbs As TextBoxes = sksdsk.TextBoxes
+		
+		Try		
+			For Each tb In sk_symbol.Definition.Sketch.TextBoxes
+				If Not tb.FormattedText Like "<Prompt*>*</Prompt>" Then
+					Continue For
+				End If
+					ReDim preserve prompt_strings(ps_idx)
+					Logger.Info("redim prompt strings")
+					prompt_strings(ps_idx) = sk_symbol.GetResultText(tb)
+					Logger.Info("{0}",{prompt_strings(ps_idx)})
+					ps_idx += 1
+			Next
+		Catch ex As Exception
+			Logger.Info("Sketchedsymbol {0} has no text fields", {sk_symbol.Name})
+		End Try
+		ssi.prompt_strings = prompt_strings
+		sksym_to_move.Add(ssi)
+	Next
+	Return sksym_to_move
+End Function

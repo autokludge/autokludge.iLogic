@@ -1,0 +1,34 @@
+﻿Dim oDocs As Documents = ThisApplication.Documents
+Dim oDrawingDoc As DrawingDocument
+
+Dim oTG As TransientGeometry
+oTG = ThisApplication.TransientGeometry
+
+Dim oTM As TransactionManager = ThisApplication.TransactionManager
+Dim oT As Transaction
+
+Dim items As Integer = 0
+
+Dim sActiveDocName As String
+Dim sActiveSheetName As String
+sActiveDocName = ThisApplication.ActiveDocument.DisplayName
+Dim dDoc As DrawingDocument = ThisApplication.ActiveDocument
+sActiveSheetName = dDoc.ActiveSheet.Name
+
+For Each oDoc As Document In ThisApplication.Documents.VisibleDocuments
+'	If oDoc.DisplayName = sActiveDocName Then
+'		Continue For 
+'	End If
+	'msgbox("test")
+    If oDoc.DocumentType = DocumentTypeEnum.kDrawingDocumentObject Then '12292 = drawing doc
+		oDrawingDoc = oDoc
+		oDrawingDoc.Activate()
+
+		'Do look AT revs
+		Dim iLogicAuto = iLogicVb.Automation.RunExternalRule(oDoc,"LOOK AT REFERENCES")
+
+
+	Else
+		
+    End If
+Next

@@ -1,0 +1,18 @@
+﻿Dim tn As BrowserNode = ThisDoc.Document.BrowserPanes.ActivePane.TopNode
+Dim layout_node As BrowserNode = tn.BrowserNodes(2)
+
+Dim s As SelectSet = ThisDoc.Document.SelectSet
+If Not TypeOf (s(1)) Is DrawingView Then
+	Return
+End If
+
+Dim dv As DrawingView = s(1)
+
+Dim dvbnd As BrowserNodeDefinition = ThisDoc.Document.BrowserPanes.GetNativeBrowserNodeDefinition(dv)
+Dim dv_nodes = tn.AllReferencedNodes(dvbnd)
+
+Dim dv_comp_node = dv_nodes(1).BrowserNodes(dv_nodes(1).BrowserNodes.Count)
+
+Dim bn As BrowserNode
+
+Return

@@ -1,0 +1,19 @@
+﻿If ThisDoc.Document.DocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+	Return
+End If
+
+Dim drg As DrawingDocument = ThisDrawing.Document
+Dim visible_background_layer As Layer
+Try
+	visible_background_layer = drg.StylesManager.Layers("Visible (ISO)").Copy("Visible Background")
+Catch
+	Logger.Info("Error creating layer, may already exist")
+	Return
+End Try
+Dim mid_gray As Color = ThisApplication.TransientObjects.CreateColor(72,72,72)
+
+visible_background_layer.LineType = LineTypeEnum.kContinuousLineType
+visible_background_layer.LineWeight = 0.035 '0.35mm'
+visible_background_layer.Color = mid_gray
+
+drg.Update()

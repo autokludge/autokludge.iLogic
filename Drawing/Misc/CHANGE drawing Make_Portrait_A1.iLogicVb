@@ -1,0 +1,50 @@
+﻿' Move block position up by 1132.5mm (maybe pos units are cm?)
+' rotate block 90deg cw
+
+' swap x,y coords for drawing views?
+' rotate drawing view 90deg cw
+Dim oTM As TransactionManager = ThisApplication.TransactionManager
+Dim oT As Transaction
+
+Dim oDoc As DrawingDocument = ThisDoc.Document
+
+Dim oSheet = oDoc.ActiveSheet
+
+oT = oTM.StartTransaction(oDoc, "Make Sheet Portrait")
+Try
+
+oSheet.Orientation = pageOrientationTypeEnum.kPortraitPageOrientation
+
+For Each oACBlock As AutoCADBlock In oSheet.AutoCADBlocks
+	Dim x As Double = oACBlock.Position.X*10
+	Dim y As Double = oACBlock.Position.Y*10
+	
+	Dim oP2D As Point2d = ThisApplication.TransientGeometry.CreatePoint2d(y,790.0-x)
+	oACBlock.Position = oP2D' 
+	oACBlock.Rotation = oACBlock.Rotation - 90*(PI/180)
+Next
+
+MsgBox("blocks done")
+
+For Each oDN As DrawingNote In oSheet.DrawingNotes
+	Dim x As Double = oDN.Position.X'*10
+	Dim y As Double = oDN.Position.Y'*10
+	Dim oP2D As Point2d = ThisApplication.TransientGeometry.CreatePoint2d(y,79.0-x)
+	oDN.Position = oP2D' 
+	'oACBlock.Rotation = oACBlock.Rotation - 90*(PI/180)
+Next
+
+For Each oSS As SketchedSymbol In oSheet.SketchedSymbols
+	Dim x As Double = oSS.Position.X'*10
+	Dim y As Double = oSS.Position.Y'*10
+	Dim oP2D As Point2d = ThisApplication.TransientGeometry.CreatePoint2d(y,79.0-x)
+	oSS.Position = oP2D' 
+	oSS.Rotation = oSS.Rotation - 90*(PI/180)
+Next
+
+Catch ex As Exception
+	MsgBox(ex.Message)
+	msgbox(ex.StackTrace)
+	oT.Abort()	
+End Try
+oT.End()

@@ -1,0 +1,26 @@
+﻿Dim oDrawDoc As DrawingDocument = ThisDrawing.Document
+Dim oSheets As Sheets
+Dim oViews As DrawingViews
+
+oSheets = oDrawDoc.Sheets
+For Each oSheet In oSheets
+	oViews = oSheet.DrawingViews
+	For Each oView As DrawingView In oViews
+		Dim ymin = oView.Top - oView.Height
+		ymin -= 3.5  '2.5   '2 DIMS + MARGIN = 1.5+1.0+1.0 => 3.5
+		Logger.Info("X{0} Y{1}", {oView.Label.Position.X, oView.Label.Position.Y})
+		
+		Dim newPos As Point2d = ThisApplication.TransientGeometry.CreatePoint2d(oView.Center.X, ymin)
+		oView.Label.Position = newPos
+		
+		oView.ShowLabel = False
+		oView.Suppressed = True
+		oDrawDoc.Update()
+		
+		oView.ShowLabel = True
+		oView.Suppressed = False
+		oDrawDoc.Update()
+		
+		'MsgBox(oView.Label.FormattedText)
+	Next
+Next

@@ -1,0 +1,50 @@
+﻿Imports System.Windows.Forms
+' This is an example iLogic rule by Luke Davenport on Cadline Community
+' It creates a 'folder browser dialog' to allow user to pick a directory location
+' This selected directory location is then used for a generic PDF export operation
+' Please modify to suit your requirements....
+
+'=============================================================================================
+' Get Export Location
+Dim DefaultPath As String = "C:\Users\jrobertson\Documents"
+'Dim rev_part_format = "_{0}"
+Dim rev_part_format = " rev {0}"
+Dim files_collection = ThisApplication.TransientObjects.CreateObjectCollection()
+Dim file_options As NameValueMap = ThisApplication.TransientObjects.CreateNameValueMap()
+file_options.Add("DeferUpdates", True)
+file_options.Add("SkipAllUnresolvedFiles", True)
+
+' Check that this file has been saved and actually exists on disk
+If String.IsNullOrEmpty(DefaultPath) Then
+    MsgBox("This location doesn't exist on disk!" _
+	& vbLf & "Please save it first",64, "Default location wrong")
+Return
+End If
+
+' Define folder browse dialog
+Dim Dialog = New OpenFileDialog()
+
+' Set options for folder browser dialog
+Dialog.InitialDirectory = DefaultPath
+Dialog.Filter = "dwg files (*.dwg)|*.dwg|All files(*.*)|*.*"
+Dialog.FilterIndex = 1
+Dialog.RestoreDirectory = True
+Dialog.Multiselect = True
+Dialog.Title = "Open drawings with defer..."
+
+' Show dialog box
+If DialogResult.OK = Dialog.ShowDialog() Then
+    ' User clicked 'ok' on dialog box - capture the export path
+	For Each f In Dialog.FileNames
+		files_collection.Add(f)
+	Next 
+Else
+    ' User clicked 'cancel' on dialog box - exit
+    Return
+End If
+
+'=============================================================================================
+' Open each drawing
+For Each dwg_file In files_collection
+	ThisApplication.Documents.OpenWithOptions(dwg_file, file_options)
+Next 

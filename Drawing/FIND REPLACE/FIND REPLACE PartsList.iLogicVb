@@ -1,0 +1,74 @@
+﻿Dim oDocs As Documents = ThisApplication.Documents
+Dim oDoc As Document
+Dim oDrawingDoc As DrawingDocument
+
+Dim oTG As TransientGeometry
+oTG = ThisApplication.TransientGeometry
+
+Dim oTM As TransactionManager = ThisApplication.TransactionManager
+Dim oT As Transaction
+
+Dim stampName as string = "Copy of prelimchkincom"
+
+Dim items As Integer = 0
+
+Dim sTags() As String = New System.String() {}
+Dim sValues() As String = New System.String() {}
+
+Dim sOldDrawingNum As String
+Dim sNewDrawingNum As String
+sOldDrawingNum = InputBox("Enter Old Text", "OLD TEXT", "")
+sNewDrawingNum = InputBox("Enter New Text", "NEW TEXT", "")
+
+Dim sCellVal As String
+
+For Each oDoc In ThisApplication.Documents.VisibleDocuments
+    If oDoc.DocumentType = 12292 Then '12292 = drawing doc
+		oDrawingDoc = oDoc
+        oT = oTM.StartTransaction(oDoc, "Replace Text Partslist")
+
+		For Each oSheet As Sheet In oDrawingDoc.Sheets
+			
+			If oSheet.PartsLists.Count = 0 Then
+				Continue For
+			End If
+			
+			Dim sRepStr As String
+			
+			' Set a reference to the first parts list on the active sheet.
+		    ' This assumes that a parts list is on the active sheet.
+		    Dim oPartList As PartsList
+		    oPartList = oSheet.PartsLists.Item(1)
+
+			For Each oRow As PartsListRow In oPartList.PartsListRows
+				
+				For Each oCell As PartsListCell In oRow
+					
+					sCellVal = oCell.Value
+					
+					If Not oCell.Static And sCellVal.Contains(sOldDrawingNum) Then
+						MsgBox("Item found - not static")
+					End If
+					
+					If sCellVal.Contains(sOldDrawingNum) Then
+						
+						oCell.Value = sCellVal.Replace(sOldDrawingNum, sNewDrawingNum)
+						items += 1
+						
+					End If
+					
+				Next
+				
+			Next				
+			
+		Next
+		
+		oT.End()
+		oDoc.Update()
+		
+	Else
+		
+    End If
+Next
+
+MsgBox("Changed " & items & " places")

@@ -1,0 +1,11 @@
+﻿If ThisDoc.Document.DocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+	Logger.Warn("This rule only runs in drawings")
+	Return
+End If
+
+Dim drg As DrawingDocument = ThisDoc.Document
+
+For Each v As DrawingView In drg.ActiveSheet.DrawingViews
+	Dim vl As DrawingViewLabel = v.Label
+	vl.HorizontalJustification = HorizontalTextAlignmentEnum.kAlignTextCenter
+next

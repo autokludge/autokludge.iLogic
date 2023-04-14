@@ -1,0 +1,24 @@
+' Set a reference to the active drawing document
+Dim oDoc As DrawingDocument
+oDoc = ThisDoc.Document
+
+' Set a reference to the active sheet
+Dim oSheet As Sheet
+oSheet = oDoc.ActiveSheet
+
+Dim oSelectSet As SelectSet
+oSelectSet = oDoc.SelectSet
+
+Dim oDrawingDim As DrawingDimension
+Dim selection As Object
+' Iterate over all dimensions in the drawing and
+' center them if they are linear or angular.
+
+For Each selection In oSelectSet
+    If TypeOf selection Is LinearGeneralDimension Or _
+       TypeOf selection Is AngularGeneralDimension Then
+	    oDrawingDim = selection
+        oDrawingDim.Text.FormattedText="="
+		oDrawingDim.HideValue=True
+    End If
+Next

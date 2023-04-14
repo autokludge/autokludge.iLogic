@@ -1,0 +1,65 @@
+﻿Imports System.Text.RegularExpressions
+Imports System.IO
+Dim curProject = ThisApplication.DesignProjectManager.ActiveDesignProject.Name
+Dim curProjectNum = curProject.Substring(0, 6)
+Dim curDrawing = ThisDoc.FileName
+Dim curFolder = ThisDoc.Path
+curDrawing = curDrawing.Replace(" ", "")
+curDrawing = curDrawing.Replace(".dwg", "")
+curDrawing = Regex.Replace(curDrawing, "[^\d-]", "")
+curDrawing = curDrawing.TrimEnd("-")
+curDrawing = curDrawing.Substring(curDrawing.LastIndexOf("-") + 1)
+Logger.Info(curDrawing)
+Dim curDrawingNumber = Integer.Parse(curDrawing)+1
+
+Dim openDrawingNumber As String
+openDrawingNumber = InputBox("Enter Drawing Number "&curProjectNum, "DRG NUMBER", String.Format("{0:D4}", {curDrawingNumber}))
+
+Dim closeCurrentAfter As MsgBoxResult = MsgBox("Close drawing " & curDrawing & " after?", MsgBoxStyle.YesNoCancel, "CLOSE THIS DRAWING?")
+If closeCurrentAfter = MsgBoxResult.Cancel Then
+	Return
+End if
+
+Dim FileLocation As DirectoryInfo = New DirectoryInfo(curFolder)
+
+Dim fi As List(Of FileInfo) = New List(Of FileInfo)
+For Each File In FileLocation.GetFiles()
+    If (File IsNot Nothing) Then
+        If (System.IO.Path.GetExtension(File.ToString.ToLower) = ".dwg") Then
+            If (File.ToString.ToLower.Contains(openDrawingNumber.ToString())) Then fi.Add(File)
+        End If
+    End If
+Next
+
+For Each f As FileInfo In fi
+	Logger.Info(f.FullName)
+Next
+
+Dim choice = 0
+If fi.Count = 0 Then
+	MsgBox("Drawing not found")
+	Return
+End If
+If fi.Count > 1 Then
+	Dim choiceNum As String
+	Dim promptString = ""
+	Dim c = 0
+	For Each f As FileInfo In fi
+		promptString += "[" & c.ToString() & "] " & f.Name & vbCrLf
+		c += 1
+	Next
+	choiceNum = InputBox(promptString, "CHOICE", 0)
+	choice = Integer.Parse(choiceNum)
+	logger.Info(choice.ToString())
+End If
+
+Try
+	Dim d As Document = ThisApplication.Documents.ItemByName(fi(choice).FullName)
+	d.Activate()
+Catch
+	Dim d As Document = ThisApplication.Documents.Open(fi(choice).FullName,True)
+End Try
+
+If closeCurrentAfter = MsgBoxResult.Yes Then
+	ThisDoc.Document.Close()
+end if

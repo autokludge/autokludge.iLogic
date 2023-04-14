@@ -1,0 +1,131 @@
+﻿Sub main()
+
+If ThisDoc.Document.DocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+	Return
+End If
+
+Dim selectedCollection As ObjectCollection = ThisApplication.TransientObjects.CreateObjectCollection()
+
+For Each sel In ThisDoc.Document.SelectSet
+	If TypeOf sel Is LeaderNote Then
+		'Logger.Info("Found LeaderNote")
+		selectedCollection.Add(sel)
+	End If
+	If TypeOf sel Is SketchedSymbol Then
+		'Logger.Info("Found SketchedSymbol")
+		selectedCollection.Add(sel)
+	end if
+Next
+
+If selectedCollection.Count < 1 Then
+	logger.Info("STUFFUP: select some things please")
+	Return
+End If
+
+Dim counter = 0
+For Each lno In selectedCollection
+	Dim leader As Leader
+	Dim ae As GeometryIntent
+	
+	If TypeOf lno Is LeaderNote Then
+		Dim ln As LeaderNote = lno
+		leader = ln.Leader
+	End If
+	If TypeOf lno Is SketchedSymbol Then
+		Dim ss As SketchedSymbol = lno
+		Dim befVis = ss.LeaderVisible
+		ss.LeaderVisible = True
+		leader = ss.Leader
+		Dim a_node = leader.AllLeafNodes.Item(1)
+		ae = a_node.AttachedEntity		
+		ss.LeaderVisible = befVis
+		Logger.Info("[Leader #{0}] {1}", {num, ss.Rotation })
+		'Logger.Info("Got Intent")
+		Dim ang As Double = intentinfo(counter, ae)
+		Dim r_rad = fix_angle(ang) 
+		ss.Rotation = r_rad
+	End If
+	
+	counter += 1
+Next
+
+End Sub
+
+Function fix_angle(aid As Double) As Double
+	Dim angle_in_deg = aid
+	Dim angle_out_deg = 0.0
+	Dim angle_out_rad = 0.0 'horizontal
+	Logger.Info(" Angle = {0:0.000} deg", {angle_in_deg})
+	
+	'clamp range 0-360
+	angle_in_deg = Math.IEEERemainder(angle_in_deg, 180.0)
+	If (angle_in_deg < 0.0) Then
+		angle_in_deg = angle_in_deg + 180
+	End If
+	Logger.Info(" Angle Clamped = {0:0.000} deg", {angle_in_deg})
+	
+	If (angle_in_deg > 90.0) Then
+		angle_out_deg = angle_in_deg - 180
+	Else
+		angle_out_deg = angle_in_deg
+	End If
+	angle_out_deg = angle_out_deg
+	
+	Logger.Info(" Angle Out = {0:0.000} deg", {angle_out_deg })
+	angle_out_rad = Math.PI * angle_out_deg / 180.0
+	Logger.Info(" Angle Out = {0:0.000} rad", {angle_out_rad })
+	Return angle_out_rad
+End Function 
+
+Function intentinfo(num As Integer, aed As GeometryIntent) As Double
+	Dim ang as Double = 0.0
+	Dim ae As GeometryIntent = aed
+	'Logger.Info("[Leader #{0}] {1}", {num, ae.ToString })
+	Logger.Info("[Leader #{0}] {1}", {num, ae.IntentType })
+	If ae.IntentType = IntentTypeEnum.kParameterIntent Then
+		Logger.Info("[Leader #{0}] Parameter: {1}", {num, ae.Intent })
+		If TypeOf ae.Geometry Is DrawingCurve Then
+			Dim g As DrawingCurve = ae.Geometry
+			Dim ev = g.Evaluator2D
+			
+			
+			Dim oTans As Double() = New Double() {}
+			Dim oPoints As Double() = New Double(){}
+			Dim oParams As Double() = {ae.Intent, ae.Intent+0.0001}
+			ev.GetTangent(oParams, oTans)
+			ev.GetPointAtParam(oParams, oPoints)
+			
+			Dim x1 = oPoints(0)
+			Dim y1 = oPoints(1)
+			Dim x2 = oPoints(2)
+			Dim y2 = oPoints(3)
+			
+			Dim rise = y2 - y1
+			Dim run = x2 - x1
+			ang = Math.Atan2(rise, run) / Math.PI * 180
+			'ang = Math.Atan(rise / run)
+			Logger.Info("[Leader #{0}] Rise: {1}", {num,rise })
+			Logger.Info("[Leader #{0}] Run: {1}", {num, run })
+			Logger.Info("[Leader #{0}] Angle: {1}", {num, ang })
+			
+			
+			
+			'Tangent method
+'			Logger.Info("[Leader #{0}] Tans: {1}", {num, oTans(0) })
+'			Logger.Info("[Leader #{0}] Tans: {1}", {num, oTans(1) })
+'			Dim n1 = oTans(0)
+'			Dim n2 = oTans(1)
+'			Dim at_n1 = Math.Atan(n1)
+'			Dim at_n2 = Math.Atan(n2)
+'			Dim at_n1_deg = at_n1 / Math.PI * 180
+'			Dim at_n2_deg = at_n2 / Math.PI * 180
+'			Dim at2 = Math.Atan2(n1, n2)
+'			Dim at2_deg = at2 / Math.PI * 180
+'			Logger.Info("[Leader #{0}] Atan1| n1:{1} {2}", {num, at_n1, at_n1_deg })
+'			Logger.Info("[Leader #{0}] Atan1| n2:{1} {2}", {num, at_n2, at_n2_deg })
+'			Logger.Info("[Leader #{0}] Atan2: {1} {2}", {num, at2, at2_deg })
+'			ang = at_deg
+		End If
+	End If
+	Return ang
+End Function

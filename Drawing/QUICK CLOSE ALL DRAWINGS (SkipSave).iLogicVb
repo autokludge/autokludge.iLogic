@@ -1,0 +1,6 @@
+﻿For Each doc As Document In ThisApplication.Documents.VisibleDocuments
+	If doc.DocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+		Continue For
+	End If
+	doc.Close(SkipSave:= True)
+Next

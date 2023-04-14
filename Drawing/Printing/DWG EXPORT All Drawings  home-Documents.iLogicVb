@@ -1,0 +1,98 @@
+﻿Imports System.Windows.Forms
+' This is an example iLogic rule by Luke Davenport on Cadline Community
+' It creates a 'folder browser dialog' to allow user to pick a directory location
+' This selected directory location is then used for a generic PDF export operation
+' Please modify to suit your requirements....
+
+'=============================================================================================
+' Get Export Location
+Dim ExportPath As String = "C:\Users\jrobertson\Documents\PDF PRINTS"
+'Dim rev_part_format = "_{0}"
+Dim rev_part_format = " rev {0}"
+
+' Check that this file has been saved and actually exists on disk
+If String.IsNullOrEmpty(ExportPath) Then
+    MsgBox("This file has not yet been saved and doesn't exist on disk!" _
+	& vbLf & "Please save it first",64, "Formsprag iLogic")
+Return
+End If
+
+' Define folder browse dialog
+Dim Dialog = New FolderBrowserDialog()
+
+' Set options for folder browser dialog
+Dialog.SelectedPath = ExportPath
+Dialog.ShowNewFolderButton = True
+Dialog.Description = "Choose Folder for Export..."
+
+' Show dialog box
+If DialogResult.OK = Dialog.ShowDialog() Then
+    ' User clicked 'ok' on dialog box - capture the export path
+    ExportPath = Dialog.SelectedPath & "\"    
+Else
+    ' User clicked 'cancel' on dialog box - exit
+    Return
+End If
+
+'=============================================================================================
+' Objects required for translation
+
+Dim dwg_addin As TranslatorAddIn = ThisApplication.ApplicationAddIns.ItemById("{C24E3AC2-122E-11D5-8E91-0010B541CD80}")
+Dim translate_context As TranslationContext = ThisApplication.TransientObjects.CreateTranslationContext()
+translate_context.Type = IOMechanismEnum.kFileBrowseIOMechanism
+Dim translate_options As NameValueMap = ThisApplication.TransientObjects.CreateNameValueMap()
+Dim translate_data_medium As DataMedium = ThisApplication.TransientObjects.CreateDataMedium()
+
+'=============================================================================================
+' Count documents to export
+Dim count = 0
+For Each doc As Document In ThisApplication.Documents.VisibleDocuments
+	If doc.DocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+		Continue For
+	End If
+	count += 1
+Next
+Logger.Info("exporting {0} docs to {1}", {count, ExportPath})
+
+'=============================================================================================
+' Export each drawing
+For Each doc As Document In ThisApplication.Documents.VisibleDocuments
+	If doc.DocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+		Continue For
+	End If
+	Dim drg As DrawingDocument = doc
+	drg_fname = Left(drg.DisplayName, Len(drg.DisplayName) -4)
+	
+	Dim rev_part = ""
+	If drg.ActiveSheet.AutoCADBlocks.Count > 0 Then
+		Dim tags As String() = {}
+		Dim values As String() = {}
+		For Each bl As AutoCADBlock In drg.ActiveSheet.AutoCADBlocks
+			bl.GetPromptTextValues(tags, values)
+			If tags.Length > 0 Then
+				For i = 0 To tags.Length - 1	
+					If tags(i).ToLower().Contains("rev") Then
+						rev_part = String.Format(rev_part_format, {values(i)})
+						Logger.Info("{0}=>{1}  rev_part:={2}", {tags(i), values(i), rev_part})
+						Exit For
+					End If
+				Next
+			End If
+		Next
+	End If
+		
+	ExportFilename = String.Format("{0}{1}{2}.DWG", {ExportPath, drg_fname, rev_part })
+	Logger.Info(ExportFilename)
+	translate_data_medium.FileName = ExportFilename
+	
+	If dwg_addin.HasSaveCopyAsOptions(drg, translate_context, translate_options) Then
+		translate_options.Value("Export_Acad_IniFile") = "D:\INVENTOR-EDR\iLogic\Drawing\Printing\ACAD.ini"
+	End If
+	Try 
+		'Publish document
+		dwg_addin.SaveCopyAs(drg, translate_context, translate_options, translate_data_medium)
+	Catch
+		MessageBox.Show("Error writing out DWG", "iLogic")
+		bError = True
+	End Try	
+Next

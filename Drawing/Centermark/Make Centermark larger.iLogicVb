@@ -1,0 +1,60 @@
+﻿imports System.Type
+' Set a reference to the active document
+Dim oDoc As Document = ThisDoc.Document
+Dim oSelectSet As SelectSet = oDoc.SelectSet
+
+'Are things selected?
+If oSelectSet.Count < 1 Then
+	MsgBox("Select Centermarks first First")
+	Return
+End If
+
+For Each item As Object In oSelectSet
+	If Not TypeOf (item) Is Centermark Then
+		logger.Error("Please only select centermarks")
+		Return
+	End If
+Next
+
+Logger.Info("{0} Items selected", {oSelectSet.Count })
+
+Dim tr As Transaction = ThisApplication.TransactionManager.StartTransaction(oDoc, "Make centermarks larger")
+Try
+
+Dim factor = 5
+
+For Each item As Object In oSelectSet
+	Logger.Info("{0}" & vbCrLf & vbTab & "--> ObjectTypeEnum.{1}", {TypeName(item), [Enum].GetName(GetType(ObjectTypeEnum), item.Type) })
+	
+	If TypeOf (item) Is Centermark Then
+		Dim cm As Centermark = item
+		
+		Logger.Info("" & vbTab & "{0}|{1}", {cm.Position.X, cm.Position.Y })
+		Logger.Info("" & vbTab & "{0}|{1}", {cm.ExtensionPointOne.X-cm.Position.X, cm.ExtensionPointOne.Y-cm.Position.Y })
+		Logger.Info("" & vbTab & "{0}|{1}", {cm.ExtensionPointTwo.X-cm.Position.X, cm.ExtensionPointTwo.Y-cm.Position.Y })
+		Logger.Info("" & vbTab & "{0}|{1}", {cm.ExtensionPointThree.X-cm.Position.X, cm.ExtensionPointThree.Y-cm.Position.Y })
+		Logger.Info("" & vbTab & "{0}|{1}", {cm.ExtensionPointFour.X - cm.Position.X, cm.ExtensionPointFour.Y - cm.Position.Y })
+		
+		Dim ep1 As Point2d = ThisApplication.TransientGeometry.CreatePoint2d((cm.ExtensionPointOne.X - cm.Position.X) * factor + cm.Position.X, 
+																			(cm.ExtensionPointOne.Y - cm.Position.Y) * factor + cm.Position.Y)
+		Dim ep2 As Point2d = ThisApplication.TransientGeometry.CreatePoint2d((cm.ExtensionPointTwo.X - cm.Position.X) * factor + cm.Position.X, 
+																			(cm.ExtensionPointTwo.Y - cm.Position.Y) * factor + cm.Position.Y)
+		Dim ep3 As Point2d = ThisApplication.TransientGeometry.CreatePoint2d((cm.ExtensionPointThree.X - cm.Position.X) * factor + cm.Position.X, 
+																			(cm.ExtensionPointThree.Y - cm.Position.Y) * factor + cm.Position.Y)
+		Dim ep4 As Point2d = ThisApplication.TransientGeometry.CreatePoint2d((cm.ExtensionPointFour.X - cm.Position.X) * factor + cm.Position.X, 
+																			(cm.ExtensionPointFour.Y - cm.Position.Y) * factor + cm.Position.Y)
+		
+		cm.ExtensionPointOne = ep1
+		cm.ExtensionPointTwo = ep2
+		cm.ExtensionPointThree = ep3
+		cm.ExtensionPointFour = ep4
+	
+	End If
+Next
+
+Catch
+	logger.Error("Make Centermark larger failed, aborting")
+	tr.Abort()
+End Try
+
+tr.End()

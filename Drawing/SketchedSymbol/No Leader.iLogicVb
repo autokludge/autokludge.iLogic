@@ -1,0 +1,31 @@
+﻿If Not ThisDoc.Document.DocumentType = DocumentTypeEnum.kDrawingDocumentObject Then
+	Logger.Error("This rule only runs from drawing documents")
+	Return
+End If
+Dim drg As DrawingDocument = ThisDoc.Document
+
+Dim pick As Object
+If ThisDoc.Document.SelectSet.Count > 0 Then
+	pick = ThisDoc.Document.SelectSet(1)
+Else
+	pick = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kDrawingSketchedSymbolFilter, "Pick Sketch Symbol")
+End If
+
+Dim sksymbol As SketchedSymbol
+If TypeOf pick Is SketchedSymbol Then
+	sksymbol = pick
+Else
+	Logger.Error("This rule only runs from drawing documents")
+	Return
+End If
+
+Dim text As String
+While True
+	sksymbol.LeaderVisible = False
+	sksymbol.Static = True
+	sksymbol = Nothing
+	sksymbol = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kDrawingSketchedSymbolFilter, "Pick Sketch Symbol")
+	If sksymbol Is Nothing Then
+		Return
+	End If
+End While

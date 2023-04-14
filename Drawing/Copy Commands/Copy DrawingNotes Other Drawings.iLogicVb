@@ -1,0 +1,98 @@
+﻿Structure DrawingNoteInfo
+	Public FormattedText As String
+	Public Position As Point2d
+	Public TextStyle As TextStyle
+	Public Width As Double 
+	Public WidthScale As Double
+	Public HAlign As HorizontalTextAlignmentEnum
+	Public VAlign As VerticalTextAlignmentEnum
+	Public LineSpacingType As TextLineSpacingTypeEnum
+	Public LineSpacing As Double
+End Structure
+
+Sub Main()
+If ThisDoc.Document.DocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+	Logger.Error("Only runs from drawing")
+	Return
+End If
+
+Dim oSelectSet As SelectSet = ThisApplication.ActiveDocument.SelectSet
+
+Dim sActiveDocName As String
+Dim sActiveSheetName As String
+sActiveDocName = ThisApplication.ActiveDocument.DisplayName
+Dim dDoc As DrawingDocument = ThisApplication.ActiveDocument
+sActiveSheetName = dDoc.ActiveSheet.Name
+
+Dim notes_to_move As List(Of DrawingNoteInfo) = New List(Of DrawingNoteInfo)
+
+If oSelectSet.Count = 0 Then
+	MsgBox("none selected")
+	Return
+End If
+
+For Each selection In oSelectSet
+    If TypeOf selection Is GeneralNote Then
+		Dim gennote = DirectCast(selection,GeneralNote)
+		Dim dni = New DrawingNoteInfo
+		dni.FormattedText = gennote.FormattedText
+		dni.Position = gennote.Position
+		dni.TextStyle = gennote.TextStyle
+		dni.Width = gennote.Width
+		dni.WidthScale = gennote.WidthScale
+		dni.HAlign = gennote.HorizontalJustification
+		dni.VAlign = gennote.VerticalJustification
+		dni.LineSpacingType = gennote.LineSpacingType
+		dni.LineSpacing = gennote.LineSpacing
+		notes_to_move.Add(dni)
+		
+		Logger.Info(dni.FormattedText)
+		Logger.Info(dni.TextStyle.Name)
+		Logger.Info("{0},{1}",{dni.Position.X, dni.Position.Y})
+		Logger.Info(dni.Width)
+		Logger.Info(dni.WidthScale)
+		Logger.Info(dni.HAlign)
+		Logger.Info(dni.VAlign)
+		Logger.Info(dni.LineSpacingType)
+		Logger.Info(dni.LineSpacing)
+    End If
+Next
+
+Dim items As Integer = 0
+For Each oDoc In ThisApplication.Documents.VisibleDocuments
+	If oDoc.DocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then Continue For
+	Dim oDrawingDoc As DrawingDocument = oDoc
+	
+	If oDrawingDoc.DisplayName = sActiveDocName And oDrawingDoc.Sheets.Count = 1 Then Continue For 
+	
+	question = MessageBox.Show("Do you want to copy to " & oDoc.DisplayName & "?", "iLogic Question",MessageBoxButtons.YesNo,MessageBoxIcon.Question)
+    If Not question = vbYes Then
+		Continue For
+	End If
+	
+	Dim tr = ThisApplication.TransactionManager.StartTransaction(oDoc, "Update Drawing Note")
+	For Each oSheet As Sheet In oDrawingDoc.Sheets
+		If oSheet.Name = sActiveSheetName And oDrawingDoc.DisplayName = sActiveDocName Then	Continue For 
+		
+		Dim oGeneralNotes As GeneralNotes = oSheet.DrawingNotes.GeneralNotes
+			
+		For Each n In notes_to_move
+			Dim gnote = oGeneralNotes.AddFitted(n.Position, n.FormattedText, n.TextStyle)
+			gnote.HorizontalJustification = n.HAlign
+			gnote.VerticalJustification = n.VAlign
+			gnote.LineSpacingType = n.LineSpacingType
+			gnote.LineSpacing = n.LineSpacing
+			gnote.WidthScale = n.WidthScale
+			gnote.Width = n.Width
+			gnote.Position = n.Position			
+		Next
+	Next
+	
+	tr.End()
+	oDoc.Update()
+	
+	items += 1
+Next
+
+MsgBox("Copied " & notes_to_move.Count & " notes to " & items & " drawings")
+End Sub

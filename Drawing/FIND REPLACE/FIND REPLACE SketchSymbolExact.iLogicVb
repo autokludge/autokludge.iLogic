@@ -1,0 +1,89 @@
+﻿Sub main
+
+Dim oDocs As Documents = ThisApplication.Documents
+Dim oDoc As Document
+Dim oDrawingDoc As DrawingDocument
+
+Dim oTG As TransientGeometry
+oTG = ThisApplication.TransientGeometry
+
+Dim oTM As TransactionManager = ThisApplication.TransactionManager
+Dim oT As Transaction
+
+Dim sOldDrawingNum As String
+Dim sNewDrawingNum As String
+sOldDrawingNum = InputBox("Enter Old Text", "OLD TEXT", "")
+sNewDrawingNum = InputBox("Enter New Text", "NEW TEXT", "")
+
+if sOldDrawingNum = "" Then
+	msgbox("Command Cancelled")
+	return
+end if
+
+Dim items As Integer = 0
+
+Dim l As String
+Try
+For Each oDoc In ThisApplication.Documents.VisibleDocuments
+    If oDoc.DocumentType = 12292 Then '12292 = drawing doc
+		oDrawingDoc = oDoc
+        oT = oTM.StartTransaction(oDoc, "Update Drawing Note")
+
+		log(l, "INFO", "In Doc: " & oDrawingDoc.DisplayName)
+
+		For Each oSheet As Sheet In oDrawingDoc.Sheets
+			
+			log(l, "INFO", "  In Sheet: " & oSheet.Name)
+			
+			For Each oSketchSymbol As SketchedSymbol In oSheet.SketchedSymbols
+				
+				log(l, "INFO", "  In SketchedSymbol: " & oSketchSymbol.Name)
+				
+				For Each oTB As TextBox In oSketchSymbol.Definition.Sketch.TextBoxes
+					Dim sFieldText As String
+					Try
+						sFieldText = oSketchSymbol.GetResultText(oTB)
+					Catch ex As Exception 
+						log(l, "ERROR", ex.Message)
+						Continue For
+					End Try
+					
+					If sFieldText.Equals(sOldDrawingNum) Then
+					
+						Try				
+							oSketchSymbol.SetPromptResultText(oTB, sFieldText.Replace(sOldDrawingNum, sNewDrawingNum))
+						Catch ex As Exception 
+							log(l, "ERROR", ex.Message)
+							Continue For
+						End Try
+						
+						items += 1
+					End If
+					
+				Next
+			Next		
+		Next
+		
+		oT.End()
+		oDoc.Update()
+		
+	Else
+		
+    End If
+Next
+
+Catch ex As Exception 
+	log(l, "ERROR", ex.Message)
+End Try
+
+MsgBox("Changed " & items & " places")
+
+MsgBox(l) 
+ 
+End Sub
+
+Sub log(ByRef logstring As String, level As String, Message As String)
+
+	logstring = logstring & "[" & level & "] " & Message & vbCr
+
+End Sub

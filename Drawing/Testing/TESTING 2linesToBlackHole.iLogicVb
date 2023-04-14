@@ -1,0 +1,118 @@
+﻿If Not ThisDoc.Document.DocumentType = DocumentTypeEnum.kDrawingDocumentObject Then
+	Logger.Error("This rule only runs from drawing documents")
+	Return
+End If
+Dim drg As DrawingDocument = ThisDoc.Document
+
+If drg.SelectSet.Count = 0 Then
+	Logger.Error("needs lines")
+	Return
+End If
+
+
+
+Dim drg_view As DrawingView
+Dim drg_sketch As DrawingSketch
+
+Dim lines As ObjectCollection = ThisApplication.TransientObjects.CreateObjectCollection()
+
+If drg.SelectSet.Count = 1 Then
+	If drg.SelectSet.Item(1).Type = ObjectTypeEnum.kGenericObject Then
+		ThisApplication.CommandManager.ControlDefinitions("SelectAsEdgesCtxCmd").Execute()
+	End If
+end if
+	
+
+If drg.SelectSet.Count Mod 2 = 0 Then
+	Logger.Debug("Even number of selected lines")
+	For Each sel In drg.SelectSet
+		If Not sel.Type = ObjectTypeEnum.kDrawingCurveSegmentObject Then
+			Logger.Warn("Please select only lines. {0}", TypeName(sel))
+			ThisApplication.StatusBarText = "Please select only lines."
+			Return
+		End If
+		Dim l As DrawingCurveSegment = sel
+		If Not l.GeometryType = Curve2dTypeEnum.kLineSegmentCurve2d Then
+			Logger.Warn("Please select only lines. {0}", TypeName(sel))
+			ThisApplication.StatusBarText = "Please select only lines."
+			Return
+		End If
+		lines.Add(l)
+	Next
+	
+	Dim line1 As DrawingCurveSegment
+	Dim line2 As DrawingCurveSegment
+	line1 = drg.SelectSet(1)
+	line2 = drg.SelectSet(2)
+	
+	Logger.Info("Points: x:{0}    y:{1}", {line1.StartPoint.X, line1.StartPoint.Y})
+	Logger.Info("Points: x:{0}    y:{1}", {line1.EndPoint.X, line1.EndPoint.Y })
+	Logger.Info("Delta:  x:{0}    y:{1}", {line1.StartPoint.X - line1.EndPoint.X, line1.StartPoint.Y - line1.EndPoint.Y })
+	' delta = real distance / 10 (mm->cm) / view scale
+	' delta x = 0 --> vertical line
+	' delta y = 0 --> horizontal line
+	' these are sheet based coordinates
+
+	Logger.Info("Points: x:{0}    y:{1}", {line2.StartPoint.X, line2.StartPoint.Y})
+	Logger.Info("Points: x:{0}    y:{1}", {line2.EndPoint.X, line2.EndPoint.Y })
+	Logger.Info("Delta:  x:{0}    y:{1}", {line2.StartPoint.X-line2.EndPoint.X, line2.StartPoint.Y-line2.EndPoint.Y })
+	
+	drg_view = line1.Parent.Parent
+	drg.SelectSet.Clear()
+Else
+	return
+End If
+		
+
+
+Dim tr As Transaction = ThisApplication.TransactionManager.StartTransaction(drg, "Add Black Hole")
+Try
+
+Logger.Debug("Adding sketch")
+drg_sketch = drg_view.Sketches.Add()
+
+
+Dim pairs_remain As Boolean = True
+
+drg_sketch.Edit()	
+While pairs_remain
+	Dim line1 As DrawingCurveSegment
+	Dim line2 As DrawingCurveSegment
+	line1 = lines(1)
+	lines.Remove(1)
+	line2 = lines(1)
+	lines.Remove(1)
+	pairs_remain = lines.Count > 0
+	
+	Logger.Debug("Create intents")	
+	Dim intent_line1 As GeometryIntent = drg_view.Parent.CreateGeometryIntent(line1.Parent)
+	Dim intent_line2 As GeometryIntent = drg_view.Parent.CreateGeometryIntent(line2.Parent)
+	Logger.Debug("Create centerline")	
+	Dim cline As Centerline = drg_view.Parent.Centerlines.AddBisector(intent_line1, intent_line2)
+	
+	Logger.Debug("Edit sketch")	
+	
+	Logger.Debug("Project selected lines")
+	Dim skline1 As SketchLine = drg_sketch.AddByProjectingEntity(line1.Parent)
+	Dim skline2 As SketchLine = drg_sketch.AddByProjectingEntity(line2.Parent)
+	Logger.Debug("Adding circles to sketch")
+	'Dim rect_lines As SketchEntitiesEnumerator = drg_sketch.SketchLines.AddAsTwoPointRectangle(skline1.StartSketchPoint, skline2.EndSketchPoint)
+	'Dim c1 As SketchCircle = drg_sketch.SketchCircles.AddByCenterRadius(skline1.StartSketchPoint, 1.0)
+	'Dim c2 As SketchCircle = drg_sketch.SketchCircles.AddByCenterRadius(skline2.StartSketchPoint, 1.0)
+	Logger.Debug("Adding rect to sketch")
+	Dim rect_lines As SketchEntitiesEnumerator = drg_sketch.SketchLines.AddAsThreePointRectangle(skline1.StartSketchPoint, skline2.StartSketchPoint, skline2.EndSketchPoint.Geometry)
+	Dim pr_coll As ObjectCollection = ThisApplication.TransientObjects.CreateObjectCollection()
+	For Each line As SketchLine In rect_lines
+		pr_coll.Add(Line)
+	Next
+	Logger.Debug("Make profile")
+	Dim pr As Profile = drg_sketch.Profiles.AddForSolid(False, pr_coll)
+	drg_sketch.SketchFillRegions.Add(pr)
+End While
+drg_sketch.ExitEdit()
+
+
+Catch
+	tr.Abort()
+End Try
+tr.End()

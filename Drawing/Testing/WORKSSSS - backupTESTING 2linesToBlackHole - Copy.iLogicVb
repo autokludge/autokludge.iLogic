@@ -1,0 +1,69 @@
+﻿If Not ThisDoc.Document.DocumentType = DocumentTypeEnum.kDrawingDocumentObject Then
+	Logger.Error("This rule only runs from drawing documents")
+	Return
+End If
+
+Dim drg As DrawingDocument = ThisDoc.Document
+Dim line1 As DrawingCurveSegment
+Dim line2 As DrawingCurveSegment
+Dim drg_view As DrawingView
+Dim drg_sketch As DrawingSketch
+
+If drg.SelectSet.Count = 2 Then
+	For Each sel In drg.SelectSet
+		If Not sel.Type = ObjectTypeEnum.kDrawingCurveSegmentObject Then
+			Logger.Warn("Please select only lines. {0}", TypeName(sel))
+			ThisApplication.StatusBarText = "Please select only lines."
+			Return
+		End If
+	Next
+	
+	line1 = drg.SelectSet(1)
+	line2 = drg.SelectSet(2)
+	
+	Logger.Info("Points: x:{0}    y:{1}", {line1.StartPoint.X, line1.StartPoint.Y})
+	Logger.Info("Points: x:{0}    y:{1}", {line1.EndPoint.X, line1.EndPoint.Y })
+	Logger.Info("Delta:  x:{0}    y:{1}", {line1.StartPoint.X - line1.EndPoint.X, line1.StartPoint.Y - line1.EndPoint.Y })
+	' delta = real distance / 10 (mm->cm) / view scale
+	' delta x = 0 --> vertical line
+	' delta y = 0 --> horizontal line
+	' these are sheet based coordinates
+
+	Logger.Info("Points: x:{0}    y:{1}", {line2.StartPoint.X, line2.StartPoint.Y})
+	Logger.Info("Points: x:{0}    y:{1}", {line2.EndPoint.X, line2.EndPoint.Y })
+	Logger.Info("Delta:  x:{0}    y:{1}", {line2.StartPoint.X-line2.EndPoint.X, line2.StartPoint.Y-line2.EndPoint.Y })
+	
+	drg.SelectSet.Clear()
+Else
+	return
+End If
+		
+drg_view = line1.Parent.Parent
+
+Dim tr As Transaction = ThisApplication.TransactionManager.StartTransaction(drg, "Add Black Hole")
+Try
+
+Logger.Debug("Adding sketch")
+drg_sketch = drg_view.Sketches.Add()
+drg_sketch.Edit()
+
+Logger.Debug("Project selected lines")
+Dim skline1 As SketchLine = drg_sketch.AddByProjectingEntity(line1.Parent)
+Dim skline2 As SketchLine = drg_sketch.AddByProjectingEntity(line2.Parent)
+Logger.Debug("Adding rect to sketch")
+Dim rect_lines As SketchEntitiesEnumerator = drg_sketch.SketchLines.AddAsTwoPointRectangle(skline1.StartSketchPoint, skline2.EndSketchPoint)
+Dim pr_coll As ObjectCollection = ThisApplication.TransientObjects.CreateObjectCollection()
+For Each line As SketchLine In rect_lines
+	pr_coll.Add(Line)
+Next
+Logger.Debug("Make profile")
+Dim pr As Profile = drg_sketch.Profiles.AddForSolid(False, pr_coll)
+drg_sketch.SketchFillRegions.Add(pr)
+drg_sketch.ExitEdit()
+' start -> line1.start -> line1.end -> line2.end -> line2.start -> line1.start
+' or rect from line1.start -> line2.end ??
+
+Catch
+	tr.Abort()
+End Try
+tr.End()

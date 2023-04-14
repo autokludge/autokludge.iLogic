@@ -1,0 +1,42 @@
+﻿Imports System.Text.RegularExpressions
+' Set a reference to the active document
+Dim oDoc As Document = ThisDoc.Document
+Dim oSelectSet As SelectSet = oDoc.SelectSet
+
+'Are things selected?
+If oSelectSet.Count < 1 Then
+	MsgBox("Select Parts First")
+	Return
+End If
+
+Dim ref_string_template As String = "<StyleOverride Font='Arial' FontSize='0.25'>{0}</StyleOverride>"
+'Logger.Info("{0} Items selected", {oSelectSet.Count})
+
+Dim count = 1
+Dim ssetCount = oSelectSet.Count
+For Each selection In oSelectSet
+	'Logger.Info("--item {0} of {1}", {count, ssetCount })
+	
+	'Logger.Debug("selection is null? {0}", {selection is nothing})
+	'msgbox(selection.Type)
+	
+	Dim selType As ObjectTypeEnum = CType(selection.Type, ObjectTypeEnum)
+	'MsgBox("Selected - " & selType.ToString)
+	
+	
+
+	'Logger.Debug("Selection Type: (ObjectTypeEnum){0}", {selection.Type})
+	
+	If TypeOf selection Is TextBox Then
+		Dim tbSel As Inventor.TextBox = selection
+		'MsgBox(tbSel.Text)
+		Dim old_f_text = tbSel.FormattedText	
+		Dim r As Regex = New Regex("^<[^>]*>(.*)<[^>]*>")
+		Dim new_f_text = r.Replace(old_f_text, "<StyleOverride Font='Arial' FontSize='0.25'>$1</StyleOverride>")
+		'MsgBox(new_f_text)
+		
+		tbSel.FormattedText = new_f_text
+
+	End If
+	count += 1
+Next

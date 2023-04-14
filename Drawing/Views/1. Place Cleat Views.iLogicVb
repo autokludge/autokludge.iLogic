@@ -1,0 +1,49 @@
+﻿Dim oModel As Document
+Dim oDocs As Documents = ThisApplication.Documents
+Dim oDoc As Document
+Dim oDrawingDoc As Document = ThisApplication.ActiveDocument
+Dim oFormat As SheetFormat
+Dim oSheet As Sheet
+Dim oTG As TransientGeometry
+Dim oViewScale As Double
+Dim oView1 As DrawingView
+Dim oViewScaleString As String
+
+Dim x = 10
+Dim y = 73  'A1 = 53    A0=73
+
+oDrawingDoc.Activate
+oSheet=oDrawingDoc.ActiveSheet
+oViewScale=1.0/3.0
+
+Dim count = 1
+
+Dim docs As New SortedDictionary(Of String, Document)
+
+For Each oDoc In ThisApplication.Documents.VisibleDocuments 
+	'MsgBox(oDoc.DisplayName & " - " & oDoc.DocumentType)
+    If oDoc.DocumentType = DocumentTypeEnum.kPartDocumentObject Or oDoc.DocumentType = DocumentTypeEnum.kAssemblyDocumentObject Then
+		oModel = oDoc
+		docs.Add(oModel.FullFileName, oModel)
+	End If
+Next
+
+For Each oModel In docs.Values
+	Dim oViewLoc As Point2d = ThisApplication.TransientGeometry.CreatePoint2d(x, y)
+	
+    oView1 = oSheet.DrawingViews.AddBaseView(oModel,oViewLoc, oViewScale, ViewOrientationTypeEnum.kFrontViewOrientation, DrawingViewStyleEnum.kHiddenLineDrawingViewStyle)
+    oView1.Scale=(oViewScale)
+    
+	' View Placement into rows
+	If count >= 5 Then
+		x = 10
+		y -= 16
+		count = 0
+	Else
+		x += 20
+	End If
+	count += 1	
+	
+	'close model tab after it is used
+	oModel.Close
+Next

@@ -1,0 +1,54 @@
+﻿Dim activeDoc As DrawingDocument = ThisApplication.ActiveDocument
+
+Dim activeView As Inventor.View = ThisApplication.ActiveView
+
+Dim adW As Double = activeDoc.ActiveSheet.Width
+Dim adH As Double = activeDoc.ActiveSheet.Height
+
+activeView.ResetFront()
+ThisApplication.CommandManager.ControlDefinitions.Item("AppZoomallCmd").Execute()
+
+Dim W As Double
+Dim H As Double
+Dim tx As Double
+Dim ty As Double
+Dim tz As Double
+Dim ex As Double
+Dim ey As Double
+Dim ez As Double
+Dim targ As Point
+
+Dim cam As Camera = activeView.Camera
+
+cam.GetExtents(W, H)
+targ = cam.Target
+tx = targ.X
+ty = targ.Y
+tz = targ.Z
+ex = cam.Eye.X
+ey = cam.Eye.Y
+eZ = cam.Eye.Z
+
+Logger.Info("W={0}   H={1}   TX={2}   TY={3}   EX={4}    EY={5}" , {W, H, tx, ty, ex, ey})
+
+'activeView.Camera.Target
+
+'INFO|W=82   H=58.5   X=41   y=29.25
+'INFO|W=34.5281756063362   H=24.632905767935   X=68.1222813742853   y=7.22228319084167
+
+'Assume coordinates are based on zoom extents
+'Therefore W and H are sheet size
+'          X,Y is centre of page
+
+'set zoom to 2x
+'set centre point to  x=77%   y=23%
+
+cam.SetExtents(W * 0.33, H * 0.33)
+cam.Target.X = tx * 2 * 0.16
+cam.Target.Y = ty * 2 * 0.23
+Dim neweye As Point = ThisApplication.TransientGeometry.CreatePoint(ex * 2 * 0.16,ey * 2 * 0.15,ez)
+cam.Eye = neweye
+Dim newt As Point = ThisApplication.TransientGeometry.CreatePoint(tx * 2 * 0.16,ty * 2 * 0.15,tz)
+cam.Target = newt
+
+cam.Apply()

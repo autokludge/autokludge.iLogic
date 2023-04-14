@@ -1,0 +1,14 @@
+﻿If ThisDoc.Document.DocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+	MsgBox("Run on a drawing")
+	Return
+End If
+
+Dim r = 237
+Dim g = 237
+Dim b = 214
+
+Dim c As Color = ThisApplication.TransientObjects.CreateColor(r,g,b)
+
+Dim d As DrawingDocument = ThisDoc.Document
+d.SheetSettings.SheetColor = c
+d.Update()

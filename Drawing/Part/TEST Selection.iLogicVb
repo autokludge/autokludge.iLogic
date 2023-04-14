@@ -1,0 +1,29 @@
+﻿imports System.Type
+' Set a reference to the active document
+Dim oDoc As Document = ThisDoc.Document
+Dim oSelectSet As SelectSet = oDoc.SelectSet
+
+'Are things selected?
+If oSelectSet.Count < 1 Then
+	MsgBox("Select Parts First")
+	Return
+End If
+
+Dim qat = ThisApplication.UserInterfaceManager.ActiveEnvironment.Ribbon.QuickAccessControls
+Try
+	Dim d = qat.Item("ID_QAT_Drawing_Select")
+Catch
+	Logger.Error("Not in Part Mode")
+	Return
+End try
+
+For Each item As Object In oSelectSet
+	Logger.Info("{0}" & vbCrLf & vbTab & "--> ObjectTypeEnum.{1}", {TypeName(item), [Enum].GetName(GetType(ObjectTypeEnum), item.Type) })
+	
+	If TypeOf (item) Is GenericObject Then
+		Dim go As GenericObject = item
+		Logger.Info("{0}" & vbCrLf & vbTab & "--> ObjectTypeEnum.{1}", {TypeName(go), [Enum].GetName(GetType(ObjectTypeEnum), go.ObjectType) })
+		
+	
+	End If
+Next

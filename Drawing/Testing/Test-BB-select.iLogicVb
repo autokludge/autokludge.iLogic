@@ -1,0 +1,22 @@
+﻿'set the list
+MultiValue.SetList("BB_TF_SIZE", _
+"1200", _
+"1400", _
+"1800")
+
+'set the parameters based on selection
+If BB_TF_SIZE = "1200" Then
+	BB_14_QTY = "111"
+Else If BB_TF_SIZE = "1400" Then
+	BB_14_QTY = "222"
+Else If BB_TF_SIZE = "1800" Then
+	BB_14_QTY = "333"
+End If
+
+'update iprops
+iProperties.Value("Custom", "BB_14_QTY") = BB_14_QTY
+iProperties.Value("Custom", "BB_TF_SIZE") = BB_TF_SIZE
+
+'update the drawing/title block 
+'this line might not be required, but it doesn't hurt
+InventorVb.DocumentUpdate()

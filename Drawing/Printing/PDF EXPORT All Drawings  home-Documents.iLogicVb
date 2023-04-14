@@ -1,0 +1,126 @@
+﻿Imports System.Windows.Forms
+' This is an example iLogic rule by Luke Davenport on Cadline Community
+' It creates a 'folder browser dialog' to allow user to pick a directory location
+' This selected directory location is then used for a generic PDF export operation
+' Please modify to suit your requirements....
+
+    
+' Get current location of this file
+Dim ExportPath As String = "C:\Users\jrobertson\Documents\PDF PRINTS"
+'Dim rev_part_format = "_{0}"
+Dim rev_part_format = " rev {0}"
+
+' Check that this file has been saved and actually exists on disk
+If String.IsNullOrEmpty(ExportPath) Then
+    MsgBox("This file has not yet been saved and doesn't exist on disk!" _
+	& vbLf & "Please save it first",64, "Formsprag iLogic")
+Return
+End If
+
+' Define folder browse dialog
+Dim Dialog = New FolderBrowserDialog()
+
+' Set options for folder browser dialog
+Dialog.SelectedPath = ExportPath
+Dialog.ShowNewFolderButton = True
+Dialog.Description = "Choose Folder for Export..."
+
+' Show dialog box
+If DialogResult.OK = Dialog.ShowDialog() Then
+    ' User clicked 'ok' on dialog box - capture the export path
+    ExportPath = Dialog.SelectedPath & "\"    
+Else
+    ' User clicked 'cancel' on dialog box - exit
+    Return
+End If
+
+'oFileName = ThisDoc.FileName
+
+' Define the filename of the file to be exported
+' In this Case it Is a PDF file extension
+'ExportFilename = oFileName & ".pdf"
+
+
+oDocument = ThisApplication.ActiveDocument
+oContext = ThisApplication.TransientObjects.CreateTranslationContext()
+oContext.Type = IOMechanismEnum.kFileBrowseIOMechanism
+oOptions = ThisApplication.TransientObjects.CreateNameValueMap()
+oDataMedium = ThisApplication.TransientObjects.CreateDataMedium()
+
+'Logger.Info("get PDF addin")
+oPDFAddIn = ThisApplication.ApplicationAddIns.ItemById _
+("{0AC6FD96-2F4D-42CE-8BE0-8AEA580399E4}")
+
+'Logger.Info("set PDF options")
+'set PDF Options
+If oPDFAddIn.HasSaveCopyAsOptions(oDocument, oContext, oOptions) Then
+	oOptions.Value("All_Color_AS_Black") = 0
+	oOptions.Value("Remove_Line_Weights") = 0
+	oOptions.Value("Vector_Resolution") = 400
+	oOptions.Value("Sheet_Range") = Inventor.PrintRangeEnum.kPrintCurrentSheet
+End If
+
+Dim count = 0
+For Each doc As Document In ThisApplication.Documents.VisibleDocuments
+	If doc.DocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+		Continue For
+	End If
+	count += 1
+Next
+
+Logger.Info("exporting {0} docs to {1}", {count, ExportPath})
+
+'Set the PDF target file name
+'
+'Logger.Info("starting foreach")
+'Dim pr = ThisApplication.CreateProgressBar(False,count, "Saving current drawings as PDF")
+For Each doc As Document In ThisApplication.Documents.VisibleDocuments
+	If doc.DocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+		Continue For
+	End If
+	'pr.Message = doc.DisplayName
+	
+	Dim oDD As DrawingDocument = doc
+	oFileName = Left(oDD.DisplayName, Len(oDD.DisplayName) - 4)
+	Logger.Info(oFileName)
+	
+	Dim rev_part = ""
+	If oDD.IsInventorDWG() Then
+		If oDD.ActiveSheet.AutoCADBlocks.Count > 0 Then
+			Dim tags As String() = {}
+			Dim values As String() = {}
+			For Each bl As AutoCADBlock In oDD.ActiveSheet.AutoCADBlocks
+				bl.GetPromptTextValues(tags, values)
+				If tags.Length > 0 Then
+					For i = 0 To tags.Length - 1	
+						If tags(i).ToLower().Contains("rev") Then
+	'						rev_part = "_" & values(i)
+							rev_part = String.Format(rev_part_format, {values(i)})
+							Logger.Info("{0}=>{1}  rev_part:={2}", {tags(i), values(i), rev_part})
+							Exit For
+						End If
+					Next
+				End If
+			Next
+		End If
+	Else
+		rev_part = String.Format(rev_part_format, oDD.PropertySets.Item("Inventor User Defined Properties").Item("Revision Number").Value)
+	End If
+	
+	' Define the filename of the file to be exported
+	' In this Case it Is a PDF file extension
+	ExportFilename = oFileName & rev_part & ".pdf"
+	oDataMedium.FileName = ExportPath & ExportFilename
+	Try 
+		'Publish document
+		oPDFAddIn.SaveCopyAs(doc, oContext, oOptions, oDataMedium)
+	Catch
+		MessageBox.Show("Error writing out PDF", "iLogic")
+		bError = True
+	End Try	
+	
+	'System.Threading.Thread.CurrentThread.Sleep(500)
+	'pr.UpdateProgress()
+Next
+
+'pr.Close()

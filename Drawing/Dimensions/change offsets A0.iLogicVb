@@ -1,0 +1,30 @@
+﻿If Not ThisDoc.Document.DocumentType = DocumentTypeEnum.kDrawingDocumentObject Then
+	Logger.Error("This rule only runs from drawing documents")
+	Return
+End If
+Dim drg As DrawingDocument = ThisDoc.Document
+Dim sht As Sheet = drg.ActiveSheet
+Dim selset As SelectSet = drg.SelectSet
+Dim drgdim As GeneralDimension 
+
+Dim first_selection = Nothing
+If selset.Count >= 1 Then
+	If TypeOf selset.Item(1) Is GeneralDimension Then
+		first_selection = selset.Item(1)
+		selset.Clear()
+	End If
+End If
+
+If first_selection Is Nothing Then
+	first_selection = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kDrawingDimensionFilter, "Pick dimension")
+End If
+
+If TypeOf first_selection Is GeneralDimension Then
+	drgdim = first_selection
+Else
+	logger.Error("Only runs on dimensions")
+	Return
+End If
+
+drgdim.Style.PartOffset = 2.5  'cm
+drgdim.Style.Spacing = 1.2  'cm

@@ -1,0 +1,74 @@
+﻿' Set a reference to the active drawing document
+Dim oDoc As DrawingDocument
+oDoc = ThisDoc.Document
+
+' Set a reference to the active sheet
+Dim oSheet As Sheet
+oSheet = oDoc.ActiveSheet
+
+Dim oSelectSet As SelectSet
+oSelectSet = oDoc.SelectSet
+
+Dim oDrawingDim As DrawingDimension
+Dim oLS2d As LineSegment2d
+Dim oDir As UnitVector2d
+
+Dim oStart As Point2d
+Dim oEnd As Point2d
+
+Dim selection As Object
+' Iterate over all dimensions in the drawing and
+' center them if they are linear or angular.
+
+'SelectSet.SelectMultiple( Entities As ObjectCollection ) 
+
+Dim oColl As ObjectCollection
+oColl = ThisApplication.TransientObjects.CreateObjectCollection
+
+For Each selection In oSelectSet
+	If TypeOf selection Is DrawingCurveSegment Then
+		
+		Dim oDrwCrv As DrawingCurve = selection.parent
+		
+		Dim oEdge As Edge = oDrwCrv.ModelGeometry
+		
+		Dim oSrfBody As SurfaceBody = oEdge.Parent
+		
+		Dim oCompDef As ComponentDefinition = oSrfBody.ComponentDefinition
+		
+		Dim oCompDefDoc As Document = oCompDef.Document
+		
+		Dim oDrgView As DrawingView = oDrwCrv.Parent
+		
+		
+		Dim oOccEnum As ComponentOccurrencesEnumerator
+		MsgBox("here")
+		oOccEnum = oCompDef.Occurrences.AllReferencedOccurrences(oDoc)
+		Dim oOcc As ComponentOccurrence
+		msgbox("here")
+		For Each oOcc In oOccEnum
+			Dim oCurveUnum As DrawingCurvesEnumerator
+			CurveUnum = oDrgView.DrawingCurves(oOcc)
+			Dim oCurve As DrawingCurve
+			Dim oSegment As DrawingCurveSegment
+			'add segments to collection to be moved to required layer
+			For Each oCurve In oCurveUnum
+				For Each oSegment In oCurve.Segments
+					'oColl.Add(oSegment)
+					msgbox("here3")
+				Next
+			Next
+		Next 'oOcc
+		
+		MsgBox(oDoc.FullFileName)
+		MsgBox(oDrgView.Name)
+		
+	End If
+	
+Next
+
+Dim oLayer As Layer
+oLayer = oDoc.StylesManager.Layers.Item("NO PLOT")
+
+oSheet.ChangeLayer(oColl, oLayer)
+oSheet.Update

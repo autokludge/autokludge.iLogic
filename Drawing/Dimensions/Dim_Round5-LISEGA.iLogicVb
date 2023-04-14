@@ -1,0 +1,49 @@
+﻿' Set a reference to the active drawing document
+Dim oDoc As DrawingDocument
+oDoc = ThisDoc.Document
+
+' Set a reference to the active sheet
+Dim oSheet As Sheet
+oSheet = oDoc.ActiveSheet
+
+Dim oSelectSet As SelectSet
+oSelectSet = oDoc.SelectSet
+
+Dim oDrawingDim As DrawingDimension
+Dim oGD As GeneralDimension 
+Dim selection As Object
+' Iterate over all dimensions in the drawing and
+' center them if they are linear or angular.
+
+Dim oTM As TransactionManager = ThisApplication.TransactionManager
+Dim oT As Transaction
+
+Dim oStylesMgr As DrawingStylesManager = oDoc.StylesManager    
+
+Dim oNewStyle As DimensionStyle _
+	= oStylesMgr.DimensionStyles.Item("LISEGA-DIM")
+
+Dim oNewLayer As Layer
+oNewLayer = oStylesMgr.Layers.Item("LISEGA DIMENSION")
+
+oT = oTM.StartTransaction(oDoc, "LISEGA ROUND 5")
+
+For Each selection In oSelectSet
+    If TypeOf selection Is LinearGeneralDimension Or _
+       TypeOf selection Is AngularGeneralDimension Then
+	    oDrawingDim = selection
+		oGD = oDrawingDim
+		oGD.Style = oNewStyle
+		oDrawingDim.Layer = oNewLayer
+		
+		oDrawingDim.Precision = 0
+        precision = oDrawingDim.Precision
+		rounding = 5 * Pow(10, (0-precision-1))
+		modelDim = oDrawingDim.ModelValue
+		orideDim = (Round(modelDim/rounding))*rounding
+		oDrawingDim.OverrideModelValue = orideDim
+		
+    End If
+Next
+
+oT.End()

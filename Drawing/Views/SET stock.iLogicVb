@@ -1,0 +1,123 @@
+﻿Sub Main()
+
+Dim oDrawingDoc As DrawingDocument = ThisDoc.Document
+Dim oView As DrawingView
+Dim oSelectSet As SelectSet = oDrawingDoc.SelectSet
+
+If oSelectSet.Count < 1 Then
+	MsgBox("Select a drawing view")
+	Return
+End if
+
+For Each selection In oSelectSet
+    If TypeOf selection Is DrawingView Then
+	    oView = selection
+		Exit For
+    End If
+Next
+
+Dim viewDoc as Document
+Dim viewDocDesc As DocumentDescriptor = oView.ReferencedDocumentDescriptor
+If viewDocDesc.ReferencedDocumentType = DocumentTypeEnum.kPartDocumentObject Then
+	viewDoc = viewDocDesc.ReferencedDocument
+Else If viewDocDesc.ReferencedDocumentType = DocumentTypeEnum.kAssemblyDocumentObject Then
+	viewDoc = viewDocDesc.ReferencedDocument
+Else
+	MsgBox("must be view of a part or assembly")
+	Return 
+End If
+
+
+
+'dim sss as string = ""
+'for each props as Inventor.Property in viewDoc.PropertySets("Design Tracking Properties")
+'	sss += props.Name + "\n"
+'next
+'msgbox(sss)
+
+' Inventor Summary Information
+' Inventor Document Summary Information
+
+' Design Tracking Properties
+	' Creation Time
+	' Part Number
+	' Project
+	' Cost Center
+	' Checked By
+	' Date Checked
+	' Engr Approved By
+	' Engr Date Approved
+	' User Status
+	' Material
+	' Part Property Revision Id
+	' Catalog Web Link
+	' Part Icon
+	' Description
+	' Vendor
+	' Document SubType
+	' Document SubType Name
+	' Proxy Refresh Date
+	' Mfg Approved By
+	' Mfg Date Approved
+	' Cost
+	' Standard
+	' Design Status
+	' Designer
+	' Engineer
+	' Authority
+	' Parameterized Template
+	' Template Row
+	' External Property Revision Id
+	' Standard Revision
+	' Manufacturer
+	' Standards Organization
+	' Language
+	' Defer Updates
+	' Size Designation
+	' Categories
+	' Stock Number
+	' Weld Material
+	' Mass
+	' SurfaceArea
+	' Volume
+	' Density
+	' Valid MassProps
+	' Flat Pattern Width
+	' Flat Pattern Length
+	' Flat Pattern Area
+	' Sheet Metal Rule
+	' Last Updated With
+	' Sheet Metal Width
+	' Sheet Metal Length
+	' Sheet Metal Area
+	' Material Identifier
+	' Appearance
+	' Flat Pattern Defer Update
+
+' Inventor User Defined Properties
+
+stockNum = InputBox("Enter StockNumber", viewDoc.DisplayName, viewDoc.PropertySets("Design Tracking Properties")("Stock Number").Value)
+'desc = InputBox("Enter Description", viewDoc.DisplayName, viewDoc.PropertySets("Design Tracking Properties")("Description").Value)
+Try
+	'partQty = InputBox("Enter Quantity", viewDoc.DisplayName, viewDoc.PropertySets("Inventor User Defined Properties")("EDR_QTY").Value)
+Catch
+	'viewDoc.PropertySets("Inventor User Defined Properties").Add("X", "EDR_QTY")
+	'partQty = InputBox("Enter Quantity", viewDoc.DisplayName, viewDoc.PropertySets("Inventor User Defined Properties")("EDR_QTY").Value)
+End Try
+
+oDTPPropertySet = viewDoc.PropertySets("Design Tracking Properties")
+oDTPPropertySet("Stock Number").Value = stockNum
+'oDTPPropertySet("Description").Value = "=" & desc & " - <STOCK NUMBER>"
+
+'oCustomPropertySet = viewDoc.PropertySets("Inventor User Defined Properties")
+Try
+	'oCustomPropertySet("EDR_QTY").Value = partQty 'set if exists
+Catch
+	'oCustomPropertySet.Add(partQty, "EDR_QTY") 'create if doesn't exist
+End Try
+
+
+
+oView.Parent.Update()
+
+End Sub

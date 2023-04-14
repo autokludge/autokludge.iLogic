@@ -1,0 +1,117 @@
+﻿' Set a reference to the active drawing document
+Dim oDoc As DrawingDocument
+oDoc = ThisDoc.Document
+
+' Set a reference to the active sheet
+Dim oSheet As Sheet
+oSheet = oDoc.ActiveSheet
+
+Dim oSelectSet As SelectSet
+oSelectSet = oDoc.SelectSet
+
+Dim oDrawingDim As LinearGeneralDimension
+Dim selection As Object
+' Iterate over all dimensions in the drawing and
+' center them if they are linear or angular.
+
+If oSelectSet.Count = 0 Then
+	MsgBox("Nothing Selected", msgboxstyle.OkOnly,"Error")
+	Return
+End If
+
+Dim tr As Transaction = ThisApplication.TransactionManager.StartTransaction(oDoc, "CUT Dimension")
+
+
+Try
+For Each selection In oSelectSet
+    If TypeOf selection Is LinearGeneralDimension Then
+	    oDrawingDim = selection
+		oDrawingDim.Precision = 0
+		'oDrawingDim.Text.FormattedText = "<DimensionValue/> CUT"	
+		Dim rb As Box2d = oDrawingDim.Text.RangeBox
+		If TypeOf selection Is AngularGeneralDimension Then
+			
+		End If
+	
+		Dim x_cent = (rb.MaxPoint.X + rb.MinPoint.X) / 2
+		Dim y_cent = (rb.MaxPoint.Y + rb.MinPoint.Y) / 2
+		Dim p_cent As Point2d
+		
+		
+		
+		p_cent = ThisApplication.TransientGeometry.CreatePoint2d(x_cent, y_cent)
+		
+		If oDrawingDim.DimensionType = DimensionTypeEnum.kVerticalDimensionType Then
+			p_cent = ThisApplication.TransientGeometry.CreatePoint2d(x_cent + 0.5, y_cent)
+		Else
+			p_cent = ThisApplication.TransientGeometry.CreatePoint2d(x_cent, y_cent-0.5)
+		End If
+		
+		Dim rot = 0.0
+		If oDrawingDim.DimensionType = DimensionTypeEnum.kAlignedDimensionType Then
+			Dim dl As Object = oDrawingDim.DimensionLine
+			If TypeOf dl Is LineSegment2d Then
+				Dim ls As LineSegment2d = dl
+				ls = ls.Copy()
+				
+				Dim zeroPI = ThisApplication.TransientGeometry.CreateUnitVector2d(1.0, 0.0)
+				
+				rot = zeroPI.AngleTo(ls.Direction)
+				
+				Dim x_trans = 0.0
+				Dim y_trans = 0.0	
+				Dim offset = 0.5 'cm
+			
+				If ls.Direction.X > 0 And ls.Direction.Y > 0 Then
+					'1st q
+					'MsgBox("1st")
+					x_trans = ls.Direction.Y * offset
+					y_trans = ls.Direction.X * -offset
+					rot = -rot
+				End If 
+				If ls.Direction.X < 0 And ls.Direction.Y > 0 Then
+					'4th q
+					'MsgBox("4th")
+					x_trans = ls.Direction.Y * -offset
+					y_trans = ls.Direction.X * offset
+					rot = PI-rot
+				End If  
+				If ls.Direction.X > 0 And ls.Direction.Y < 0 Then
+					'2nd q
+					'MsgBox("2nd")
+					x_trans = ls.Direction.Y * offset
+					y_trans = ls.Direction.X * - offset
+				End If 
+				If ls.Direction.X < 0 And ls.Direction.Y < 0 Then
+					'3rd q
+					'MsgBox("3rd")
+					x_trans = ls.Direction.Y * -offset
+					y_trans = ls.Direction.X * offset
+					rot = rot+PI
+				End If 
+				
+				p_cent = ThisApplication.TransientGeometry.CreatePoint2d(x_cent + x_trans, y_cent + y_trans)
+				
+			End If
+		End If
+		
+		
+		Dim gn As GeneralNote = oSheet.DrawingNotes.GeneralNotes.AddFitted(p_cent, "CUT")
+		gn.HorizontalJustification = HorizontalTextAlignmentEnum.kAlignTextCenter
+		gn.Position = p_cent
+		
+		If oDrawingDim.DimensionType = DimensionTypeEnum.kVerticalDimensionType Then
+			gn.Rotation = 90*PI/180
+		End If
+		If oDrawingDim.DimensionType = DimensionTypeEnum.kAlignedDimensionType Then
+			gn.Rotation = -rot
+		End If
+    End If
+Next
+Catch ex As Exception
+	MsgBox("abort" & VbCrLf & ex.Message)
+	tr.Abort()
+	Return
+End Try
+
+tr.End()

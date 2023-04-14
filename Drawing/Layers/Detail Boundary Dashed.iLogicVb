@@ -1,0 +1,11 @@
+﻿If ThisDoc.Document.DocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+	Return
+End If
+
+Dim drg As DrawingDocument = ThisDrawing.Document
+Dim detail_boundary As Layer = drg.StylesManager.Layers("Detail Boundary (ISO)")
+
+detail_boundary.LineType = LineTypeEnum.kDashedHiddenLineType
+detail_boundary.LineWeight = 0.035 '0.35mm'
+
+drg.Update()

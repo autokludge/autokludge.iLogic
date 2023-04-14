@@ -1,0 +1,43 @@
+﻿Dim oDrawDoc As DrawingDocument = ThisDrawing.Document
+Dim oSheet As Sheet
+Dim oSheets As Sheets
+'Dim oView As DrawingView
+Dim oViews As DrawingViews
+Dim oPosXStr As String
+Dim oPosYStr As String
+Dim oPosX As Double
+Dim oPosY As Double
+
+
+oSheets = oDrawDoc.Sheets
+For Each oSheet In oSheets
+	oViews = oSheet.DrawingViews
+	For Each oView As DrawingView In oViews
+		If oView.ViewType = DrawingViewTypeEnum.kDetailDrawingViewType Then
+			Dim oDetView As DetailDrawingView 
+			oDetView = oView
+			If oDetView.CircularFence Then
+				
+				Dim msg = "Fence Radius" + oDetView.FenceRadius.ToString
+				MsgBox(msg)
+				
+				oPosXStr = InputBox("Enter X", "X", "")
+				If Not IsNumeric(oPosXStr) Then
+					Return
+				Else
+					oPosX = CDblAny(oPosXStr)
+				End If
+				
+				oPosYStr = InputBox("Enter Y", "Y", "")
+				If Not IsNumeric(oPosYStr) Then
+					Return
+				Else
+					oPosY = CDblAny(oPosYStr)
+				End If
+				
+				'oDetView.FenceRadius = oSize
+				oDetView.FenceCenter = ThisApplication.TransientGeometry.CreatePoint2d(oDetView.FenceCenter.X + oPosX, oDetView.FenceCenter.Y + oPosY)
+			End If
+		End If
+	Next
+Next

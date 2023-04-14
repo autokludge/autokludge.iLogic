@@ -1,0 +1,170 @@
+﻿Sub Main()
+Dim ls As String = ""
+Logger.Info("Starting ilogic rule")
+
+Dim oDoc As Document = ThisApplication.ActiveDocument
+Dim oDrawDoc As DrawingDocument = ThisDrawing.Document
+Dim oSheets As Sheets
+oSheets = oDrawDoc.Sheets
+Dim oViews As DrawingViews
+
+Dim paramTemp As String = "<StyleOverride FontSize='0.5'><Property Document='model' PropertySet='User Defined Properties' Property='THICKNESS' FormatID='{{D5CDD505-2E9C-101B-9397-08002B2CF9AE}}' PropertyID='{0}'>THICKNESS</Property></StyleOverride><StyleOverride FontSize='0.5'> THICK</StyleOverride>"
+
+Dim oTM As TransactionManager = ThisApplication.TransactionManager
+Dim oT As Transaction
+
+Dim count = 0
+
+For Each lnote As LeaderNote In oDrawDoc.ActiveSheet.DrawingNotes.LeaderNotes
+	If lnote.Text = "T" Then
+		count += 1
+	End If 
+Next
+
+If count = 0 Then
+	MsgBox("Create Leader with text = T, then rerun this")
+	Return
+End If
+
+
+oT = oTM.StartTransaction(oDoc, "Thickness leader note")
+Try
+For Each lnote As LeaderNote In oDrawDoc.ActiveSheet.DrawingNotes.LeaderNotes
+	If lnote.Text = "T" Then
+		Logger.Info("'T' LeaderNote")
+		Dim geo = lnote.Leader.AllLeafNodes(1).AttachedEntity.Geometry
+		Dim par = lnote.Leader.Parent
+		Logger.Info("Got Attached Geometry")
+		If TypeOf geo Is DrawingCurve 
+			Dim dcGeo As DrawingCurve = geo
+			Dim dcModelGeo = dcGeo.ModelGeometry
+			
+			If TypeOf dcModelGeo Is Edge Then
+				
+				Dim edgeGeo As Edge = dcModelGeo
+				Dim p = edgeGeo.Parent.Parent
+				Logger.Info("Got Edge")
+				If TypeOf p Is PartComponentDefinition Then
+					
+					Dim pcd As PartComponentDefinition = p
+					Dim doc As Document = pcd.Document
+					Dim docname = doc.FullFileName
+					Dim exfeat As ExtrudeFeature
+					Dim pid As String
+					
+					Logger.Info("Found doc name: " & doc.DisplayName)
+					
+					If pcd.Features.ExtrudeFeatures.Count > 0 Then
+						
+						exfeat = pcd.Features.ExtrudeFeatures(1)
+						Logger.Info("Got Extrude Feature")
+						If exfeat.Definition.ExtentType = PartFeatureExtentEnum.kDistanceExtent Then
+							Dim distext As DistanceExtent = exfeat.Definition.Extent
+							Logger.Info("param name is " & distext.Distance.Name)
+							distext.Distance.Name = "THICKNESS"
+							Logger.Info("Set Param Name to THICKNESS")
+							distext.Distance.ExposedAsProperty = True
+							Dim cpf As CustomPropertyFormat = distext.Distance.CustomPropertyFormat
+							Logger.Info("made cpf")
+							If cpf.ShowUnitsString Then
+								Logger.Info("units string true ")	
+								cpf.ShowUnitsString = False
+							Else
+								Logger.Info("already false")	
+							End If
+							
+							cpf.ShowUnitsString = False
+							Logger.Info("dont show units string")
+							Logger.Info("test")
+							Logger.Info("Precision was: " & cpf.Precision.ToString)
+							cpf.Precision = CustomPropertyPrecisionEnum.kZeroDecimalPlacePrecision	
+							distext.Distance.ExposedAsProperty = True
+							Logger.Info("DistanceExtentFound: " & doc.DisplayName & " - " & pname)
+						Else
+							Logger.Error("Wrong Extrusion Type: " & doc.DisplayName)
+							
+							Try
+								Dim cpf As CustomPropertyFormat = pcd.Parameters("THICKNESS").CustomPropertyFormat
+								cpf.ShowUnitsString = False
+								Logger.Info("Precision was: " & cpf.Precision.ToString)
+								cpf.Precision = CustomPropertyPrecisionEnum.kZeroDecimalPlacePrecision	
+								pcd.Parameters("THICKNESS").ExposedAsProperty = True
+								Logger.Info("Thickness Param Found: " & doc.DisplayName)
+								
+							Catch
+								Logger.Error("Parameter Not Found: " & doc.DisplayName & " , continuing")
+								Continue For
+							End Try
+						End If
+						
+					Else
+						logger.Error("**No Extrusions: " & doc.DisplayName)
+						If pcd.ReferenceComponents.DerivedPartComponents.Count >= 1 Then
+							Logger.Info("derived: " & pcd.ReferenceComponents.DerivedPartComponents.Count)
+							Dim oDerPartComp As DerivedPartComponent = pcd.ReferenceComponents.DerivedPartComponents(1)
+							
+							Try
+								Logger.Info("derived: ")
+								oDerPartComp.Definition.Parameters("THICKNESS").IncludeEntity = False
+							
+							Catch
+								Logger.Error("TROUBLE including thickness param")
+							End Try
+						End If
+						
+						Try
+							Dim cpf As CustomPropertyFormat = pcd.Parameters("THICKNESS").CustomPropertyFormat
+							cpf.ShowUnitsString = False
+							Logger.Info("Precision was: " & cpf.Precision.ToString)
+							cpf.Precision = CustomPropertyPrecisionEnum.kZeroDecimalPlacePrecision			
+							pcd.Parameters("THICKNESS").ExposedAsProperty = True
+							
+							Logger.Info("Thickness Param Found: " & doc.DisplayName)
+						Catch
+							Logger.Error("Parameter Not Found: " & doc.DisplayName & " , continuing")
+							Continue For
+						End Try
+						
+						'Continue For
+					End If
+							
+					
+					Dim ps As PropertySet = doc.PropertySets("User Defined Properties")
+					
+					'Logger.Info("Get thickness property")
+					pid = ps.Item("THICKNESS").PropId
+					'Val = ps.Item("THICKNESS").Value
+
+					Dim newstring As String = String.Format(paramTemp, pid.ToString)
+
+					'Logger.Info("replace T with" & vbCr & newstring)
+					Try
+						Logger.Info("Setting FormettedText: " & doc.DisplayName)
+						lnote.FormattedText = newstring
+					Catch
+						Logger.Error("Setting FormettedText:" & doc.DisplayName)
+						'msgbox(newstring)
+					End Try
+					
+					
+					Continue For
+				End If
+				
+			End If
+			
+		End If
+		
+	End If 
+Next
+
+Catch ex As Exception
+	oT.Abort()
+	Logger.Error(ex.Message)
+	MsgBox(ls)
+	Return
+End Try
+
+oT.End()
+Logger.Info("Transaction End")
+
+End Sub

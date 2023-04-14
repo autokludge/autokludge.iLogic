@@ -1,0 +1,40 @@
+﻿' Set a reference to the active drawing document
+Dim oDoc As DrawingDocument
+oDoc = ThisDoc.Document
+
+' Set a reference to the active sheet
+Dim oSheet As Sheet
+oSheet = oDoc.ActiveSheet
+
+Dim oSelectSet As SelectSet
+oSelectSet = oDoc.SelectSet
+
+Dim oDrawingDim As DrawingDimension
+Dim selection As Object
+' Iterate over all dimensions in the drawing and
+' center them if they are linear or angular.
+
+For Each selection In oSelectSet
+    If TypeOf selection Is LinearGeneralDimension Or _
+       TypeOf selection Is AngularGeneralDimension Then
+	    oDrawingDim = selection
+			
+		myparam = InputBox("Arc R= ", "Arc Radius", -1)
+		Dim arc_r As Double
+		arc_r = CDbl(myparam)
+
+		'degrees in radians
+		modelDim = oDrawingDim.ModelValue
+		arc_rads = modelDim
+				
+		If myparam > 0 Then
+			arc_mm = arc_rads * arc_r
+			
+			arc_mm_trunc = (Round(arc_mm/0.01))*0.01
+			
+			oDrawingDim.Text.FormattedText="<DimensionValue/>(" & arc_mm_trunc & " arc)"
+			
+			oDrawingDim.HideValue=True
+		End If
+    End If
+Next

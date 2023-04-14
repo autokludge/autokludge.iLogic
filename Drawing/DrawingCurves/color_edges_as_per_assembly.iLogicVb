@@ -1,0 +1,117 @@
+﻿Sub Main()
+	' Get the active drawing document.
+   Dim drawDoc As DrawingDocument
+   drawDoc = ThisApplication.ActiveDocument
+
+   ' Have the user select a drawing view.
+   Dim drawView As DrawingView
+   drawView = ThisApplication.CommandManager.Pick( _
+                  kDrawingViewFilter, "Select a drawing view.") 
+
+   Dim docDesc As DocumentDescriptor
+   docDesc = drawView.ReferencedDocumentDescriptor 
+
+   ' Verify that the selected drawing view is of an assembly.
+   If docDesc.ReferencedDocumentType <> kAssemblyDocumentObject Then
+      MsgBox("The selected view must be of an assembly.")
+      Exit Sub
+   End If 
+
+   ' Get the component definition for the assembly.
+   Dim asmDef As AssemblyComponentDefinition
+   asmDef = docDesc.ReferencedDocument.ComponentDefinition 
+
+   ' Process the occurrences, wrapping it in a transaction so the
+   ' entire process can be undone with a single undo operation.
+   Dim trans As Transaction
+   trans = ThisApplication.TransactionManager.StartTransaction( _
+                               drawDoc, "Change drawing view color") 
+
+   ' Call the recursive function that does all the work.
+   ProcessAssemblyColor(drawView, asmDef.Occurrences)
+   trans.End 
+End Sub
+
+Private Sub ProcessAssemblyColor(drawView As DrawingView, _
+                                 Occurrences As ComponentOccurrences)
+   ' Iterate through the current collection of occurrences.
+   Dim occ As ComponentOccurrence
+   For Each occ In Occurrences
+      ' Check to see if this occurrence is a part or assembly.
+      If occ.DefinitionDocumentType = DocumentTypeEnum.kPartDocumentObject Then
+         ' ** It's a part so process the color. 
+
+         ' Get the render style of the occurrence.
+         Dim color As RenderStyle
+         Dim sourceType As StyleSourceTypeEnum
+         color = occ.GetRenderStyle(sourceType) 
+
+         ' Get the TransientsObjects object to use later.
+         Dim transObjs As TransientObjects
+         transObjs = ThisApplication.TransientObjects 
+
+         ' Verify that a layer exists for this color.
+         Dim layers As LayersEnumerator
+         layers = drawView.Parent.Parent.StylesManager.layers 
+
+         Dim drawDoc As DrawingDocument
+         drawDoc = drawView.Parent.Parent 
+
+         On Error Resume Next
+         Dim colorLayer As Layer
+         colorLayer = layers.Item(color.Name) 
+
+         If Err.Number <> 0 Then
+            On Error GoTo 0
+            ' Get the diffuse color for the render style.
+            Dim red As Byte
+            Dim green As Byte
+            Dim blue As Byte 
+
+            ' Create a color object that is the diffuse color.
+            color.GetDiffuseColor(red, green, blue)
+            Dim newColor As color
+            newColor = transObjs.CreateColor(red, green, blue) 
+
+            ' Copy an arbitrary layer giving it the name
+            ' of the render style.
+            colorLayer = layers.Item(1).Copy(color.Name)
+
+            ' Set the attributes of the layer to use the color,
+            ' have a solid line type, and a specific width.
+            colorLayer.color = newColor
+            colorLayer.LineType = kContinuousLineType
+            colorLayer.LineWeight = 0.02
+         End If
+         On Error GoTo 0 
+
+         ' Get all of the curves associated with this occurrence.
+         On Error Resume Next
+         Dim drawcurves As DrawingCurvesEnumerator
+         drawcurves = drawView.DrawingCurves(occ)
+         If Err.Number = 0 Then
+            On Error GoTo 0 
+
+            ' Create an empty collection.
+            Dim objColl As ObjectCollection
+            objColl = transObjs.CreateObjectCollection() 
+
+            ' Add the curve segments to the collection.
+            Dim drawCurve As DrawingCurve
+            For Each drawCurve In drawcurves
+               Dim segment As DrawingCurveSegment
+               For Each segment In drawCurve.Segments
+                  objColl.Add(segment)
+               Next
+            Next 
+
+            ' Change the layer of all of the segments.
+            drawView.Parent.ChangeLayer(objColl, colorLayer)
+         End If
+         On Error GoTo 0
+      Else
+         ' It's an assembly so process its contents.
+         ProcessAssemblyColor(drawView, occ.SubOccurrences)
+      End If
+   Next
+End Sub

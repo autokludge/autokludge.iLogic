@@ -1,0 +1,50 @@
+﻿' Set a reference to the active drawing document
+Dim oDoc As DrawingDocument
+oDoc = ThisDoc.Document
+
+' Set a reference to the active sheet
+Dim oSheet As Sheet
+oSheet = oDoc.ActiveSheet
+
+Dim oSelectSet As SelectSet
+oSelectSet = oDoc.SelectSet
+
+Dim oDrawingDim As DrawingDimension
+Dim oLS2d As LineSegment2d
+Dim oDir As UnitVector2d
+
+Dim oStart As Point2d
+Dim oEnd As Point2d
+
+Dim selection As Object
+' Iterate over all dimensions in the drawing and
+' center them if they are linear or angular.
+
+For Each selection In oSelectSet
+	MsgBox(selection.Type)
+	If TypeOf selection Is GenericObject Then
+		MsgBox(selection.ObjectType)	
+	End If
+		
+'    If TypeOf selection Is LinearGeneralDimension Or _
+'       TypeOf selection Is AngularGeneralDimension Then
+'	    oDrawingDim = selection
+        
+'		'DO STUFF NOW
+'		oLS2d = oDrawingDim.DimensionLine
+		
+'		'oDir = oLS2d.Direction
+'		'MsgBox("Test Dir X:" & oDir.X & " - Y:" & oDir.y)
+		
+'		oStart = oLS2d.StartPoint
+'		oEnd = oLS2d.EndPoint
+		
+'		Dim s as String = ""
+		
+'		s &= "From X:" & oStart.X & "Y:" & oStart.Y & vbNewLn
+'		s &= "To   X:" & oEnd.X & "Y:" & oEnd.Y
+		
+'		MsgBox(s)
+		
+'    End If
+Next

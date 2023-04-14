@@ -1,0 +1,65 @@
+﻿' Set a reference to the active drawing document
+Dim oDoc As DrawingDocument
+oDoc = ThisDoc.Document
+
+' Set a reference to the active sheet
+Dim oSheet As Sheet
+oSheet = oDoc.ActiveSheet
+
+Dim oSelectSet As SelectSet
+oSelectSet = oDoc.SelectSet
+
+Dim oDrawingDim As DrawingDimension
+Dim oLDM As LinearGeneralDimension 
+Dim selection As Object
+' Iterate over all dimensions in the drawing and
+' center them if they are linear or angular.
+
+For Each selection In oSelectSet
+    If TypeOf selection Is LinearGeneralDimension Then
+	    oLDM = selection
+        'Call oDrawingDim.CenterText
+		
+		'check if dim is horiz or vert
+		'oDD.DimensionType    kVerticleDimensionType  kHorizontalDimensionType
+		
+		'oDD.Text.Origin.Y
+		'oDD.Text.Origin.X
+		
+		'bump one by 5 away from view centre
+		
+		'MsgBox(oLDM.DimensionType)
+		Dim newPos As Point2d = oLDM.Text.Origin
+		Dim scale As Double = oDoc.ActiveSheet.DrawingViews(1).Scale
+		Dim modelVal As Double = oLDM.ModelValue / 2
+		Dim displace = (modelVal + 8.0)*scale
+		
+		'MsgBox(" " & newPos.X & " " & newPos.Y)
+		'MsgBox(" " & scale & " " & displace)
+		
+		If oLDM.DimensionType = DimensionTypeEnum.kVerticalDimensionType Then
+			newPos.Y = newPos.Y + displace
+			oLDM.Text.Origin = newPos
+		Else If oLDM.DimensionType = DimensionTypeEnum.kHorizontalDimensionType Then
+			newPos.X = newPos.X + displace
+			oLDM.Text.Origin = newPos
+		Else If oLDM.DimensionType = DimensionTypeEnum.kAlignedDimensionType Then
+			newPos.X = newPos.X + displace
+			oLDM.Text.Origin = newPos
+		End If
+    Else If TypeOf selection Is AngularGeneralDimension Then
+	    oDrawingDim = selection
+        'Call oDrawingDim.CenterText
+		
+		'check if dim is horiz or vert
+		'oDD.DimensionType    kVerticleDimensionType  kHorizontalDimensionType
+		
+		'oDD.Text.Origin.Y
+		'oDD.Text.Origin.X
+		
+		'bump one by 5 away from view centre
+		
+    End If
+Next
+
+oDoc.Update2(True)

@@ -1,0 +1,48 @@
+﻿Dim oDocs As Documents = ThisApplication.Documents
+Dim oDoc As Document
+Dim oDrawingDoc As DrawingDocument
+
+Dim oTG As TransientGeometry
+oTG = ThisApplication.TransientGeometry
+
+Dim oTM As TransactionManager = ThisApplication.TransactionManager
+Dim oT As Transaction
+
+Dim sOldDrawingNum As String
+Dim sNewDrawingNum As String
+sOldDrawingNum = InputBox("Enter Old Text", "OLD TEXT", "")
+sNewDrawingNum = InputBox("Enter New Text", "NEW TEXT", "")
+
+if sOldDrawingNum = "" Then
+	msgbox("Command Cancelled")
+	return
+end if
+
+Dim items As Integer = 0
+
+For Each oDoc In ThisApplication.Documents.VisibleDocuments
+    If oDoc.DocumentType = 12292 Then '12292 = drawing doc
+		oDrawingDoc = oDoc
+        oT = oTM.StartTransaction(oDoc, "Update Drawing Note")
+
+		For Each oSheet As Sheet In oDrawingDoc.Sheets
+			
+			For Each oDrawingDim As DrawingDimension In oSheet.DrawingDimensions
+				If oDrawingDim.Text.Text.Contains(sOldDrawingNum) Then
+					items += 1
+					
+					oDrawingDim.Text.FormattedText = oDrawingDim.Text.FormattedText.Replace(sOldDrawingNum, sNewDrawingNum)
+				End If
+			Next
+			
+		Next
+		
+		oT.End()
+		oDoc.Update()
+		
+	Else
+		
+    End If
+Next
+
+MsgBox("Changed " & items & " places")

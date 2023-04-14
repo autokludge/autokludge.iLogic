@@ -1,0 +1,24 @@
+﻿Dim oDrawDoc As DrawingDocument = ThisDrawing.Document
+Dim oSheet As Sheet
+Dim oSheets As Sheets
+Dim oView As DrawingView
+Dim oViews As DrawingViews
+Dim oScaleStr As String
+Dim oScale As Double
+oScaleStr = InputBox("Enter Desired Scale", "Scaler", "")
+
+If oScaleStr.Contains(":") Then
+	oScale = CDbl(oScaleStr.Split(":")(0))/CDbl(oScaleStr.Split(":")(1))
+Else
+	oScale = oScaleStr
+End If
+
+oSheets = oDrawDoc.Sheets
+For Each oSheet In oSheets
+	oViews = oSheet.DrawingViews
+	For Each oView In oViews
+		If oView.ScaleFromBase = False Then
+			oView.Scale = oScale
+		End If
+	Next
+Next

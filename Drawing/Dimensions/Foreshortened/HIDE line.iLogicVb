@@ -1,0 +1,41 @@
+﻿Sub Main()
+	
+	
+Dim oSelectSet As SelectSet = ThisDoc.Document.SelectSet
+	
+'Are things selected?
+If oSelectSet.Count < 1 Then
+	MsgBox("Select Foreshortend Dimension First")
+	Return
+End If
+
+Dim firstSel = oSelectSet(1)	
+Dim oDrawingSketch As DrawingSketch
+If TypeOf firstSel Is DrawingSketch Then
+	oDrawingSketch = firstSel
+else
+	MsgBox("Select Linear Foreshortened Dimension")
+	Return
+End If
+
+' If oDrawingSketch IsNot Nothing And oDrawingDim.DimensionType <> DimensionTypeEnum.kLinearForeshortenedDimensionType Then
+' 	MsgBox("Select Linear Foreshortened Dimension")
+' 	Return
+' End If
+
+oDrawingSketch.Edit()
+Logger.Info("Number of sketchlines: {0}",oDrawingSketch.SketchLines.Count)
+For Each skLine As SketchLine In oDrawingSketch.SketchLines
+	Logger.Info("SketchLine reference?: {0}", skLine.Reference)
+	Logger.Info("SketchLine Disabled Actions?: {0}", skLine.DisabledActionTypes)
+	If skLine.Reference Then
+		Continue For
+	End If
+	Try
+		skLine.SketchOnly = True
+	catch
+	End Try
+next
+oDrawingSketch.ExitEdit()
+
+End Sub

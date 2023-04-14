@@ -1,0 +1,67 @@
+﻿'HKEY_CURRENT_USER\Software\Acro Software Inc\CPW
+'Filename -- full file path
+'Title -- filename
+
+'=================================================================================
+' GET CutePDF Filename from registry
+'=================================================================================
+'Dim myWS As Object
+'Dim i_RegKey As String = "HKEY_CURRENT_USER\Software\Acro Software Inc\CPW\Title"
+'Dim i_RegKey As String = "HKEY_CURRENT_USER\Software\Acro Software Inc\CPW\Filename" 'Full path
+'Dim regVal As String
+'Try
+	'myWS = CreateObject("WScript.Shell")
+	'regVal = myWS.RegRead(i_RegKey)
+'Catch
+'End Try
+'=================================================================================
+
+Dim oDocs As Documents = ThisApplication.Documents
+Dim oDoc As Document
+Dim oDrawingDoc As DrawingDocument
+
+Dim oTG As TransientGeometry
+oTG = ThisApplication.TransientGeometry
+
+Dim oTM As TransactionManager = ThisApplication.TransactionManager
+Dim oT As Transaction
+
+Dim items As Integer = 0
+
+Dim sTags() As String = New System.String() {}
+Dim sValues() As String = New System.String() {}
+
+For Each oDoc In ThisApplication.Documents.VisibleDocuments
+    If oDoc.DocumentType = 12292 Then '12292 = drawing doc
+		oDrawingDoc = oDoc
+        oT = oTM.StartTransaction(oDoc, "Update Sheet Revision")
+
+		For Each oSheet As Sheet In oDrawingDoc.Sheets
+			
+				'hope this works
+				Try				
+					Dim DPM As DrawingPrintManager = oDrawingDoc.PrintManager
+					
+					DPM.Printer = "CutePDF Writer"
+					DPM.PrintRange = PrintRangeEnum.kPrintCurrentSheet
+					DPM.SubmitPrint()
+
+
+					System.Threading.Thread.CurrentThread.Sleep(7000)
+					
+					items += 1
+				Catch
+					MsgBox("failure")
+				End Try
+			
+		Next
+		
+		oT.End()
+		oDoc.Update()
+		
+	Else
+		
+    End If
+Next
+
+MsgBox("Printed " & items & " drawings")

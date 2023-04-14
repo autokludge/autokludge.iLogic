@@ -1,0 +1,26 @@
+﻿If ThisDoc.Document.DocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+	Logger.Error("This rule only runs in drawings")
+	Return
+End If
+
+Dim drg_doc As DrawingDocument = ThisDoc.Document
+Dim sheet As Sheet = drg_doc.ActiveSheet
+
+Dim true_dims As ObjectCollection = ThisApplication.TransientObjects.CreateObjectCollection()
+
+For Each dv As DrawingView In sheet.DrawingViews
+	If dv.GeneralDimensionType = GeneralDimensionTypeEnum.kTrueGeneralDimension Then
+		Logger.Warn("View {0} set to true dimensions, setting to projected", {dv.Name })
+	End If
+Next
+
+For Each d As GeneralDimension In sheet.DrawingDimensions
+	If d.GeneralDimensionType = GeneralDimensionTypeEnum.kTrueGeneralDimension Then
+		true_dims.Add(d)
+	End If
+Next
+
+Logger.Info("True Dimensions found: {0}", {true_dims.Count()})
+	
+drg_doc.SelectSet.Clear()
+drg_doc.SelectSet.SelectMultiple(true_dims)

@@ -1,0 +1,30 @@
+﻿' Set a reference to the active document
+Dim oDoc As Document = ThisDoc.Document
+Dim oSelectSet As SelectSet = oDoc.SelectSet
+
+'Are things selected?
+If oSelectSet.Count < 1 Then
+	MsgBox("Select drawing line first", MsgBoxStyle.OkOnly, "Error")
+	Return
+End If
+
+Dim newSelection As ObjectCollection = ThisApplication.TransientObjects.CreateObjectCollection()
+
+For Each selection As Object In oSelectSet
+	Dim selType As ObjectTypeEnum = CType(selection.Type, ObjectTypeEnum)
+	
+	If TypeOf selection Is DrawingCurveSegment Then
+		Dim dcs As DrawingCurveSegment = selection
+		
+		'MsgBox(dcs.Layer.LineType)
+		If dcs.Layer.LineType = LineTypeEnum.kDashedHiddenLineType Then
+			newSelection.Add(dcs)
+		End If
+		'MsgBox("Selected Curve - " & dcs.GeometryType.ToString, MsgBoxStyle.OkOnly, "Selected Curve")
+	Else
+		'MsgBox("Selected - " & selType.ToString, MsgBoxStyle.OkOnly, "Selected Object")
+	End If
+Next
+
+oSelectSet.Clear()
+oSelectSet.SelectMultiple(newSelection)

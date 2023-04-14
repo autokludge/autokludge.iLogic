@@ -1,0 +1,29 @@
+﻿' Jesse Robertson 2021
+' jessrobe@gmail.com
+' Copy Dimension to Clipboard
+Imports System.Windows.Forms
+If ThisDoc.Document.DocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+	Logger.Error("Only runs in drawings")
+	Return
+End If
+
+' Set a reference to the active document
+Dim drg As DrawingDocument = ThisDrawing.Document
+Dim sel As SelectSet = drg.SelectSet
+
+'Are things selected?
+If sel.Count <> 1 Then
+	Logger.Warn("Only pick one dimension")
+	sel.Clear
+	Dim d = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kDrawingDimensionFilter, "Pick dimension")
+	sel.Select(d)
+End If
+
+If Not TypeOf sel(1) Is GeneralDimension Then
+	Logger.Error("Needs a dimension")
+	Return
+End If
+
+Dim gd As GeneralDimension = sel(1)		
+Clipboard.SetText(gd.Text.FormattedText)
+sel.Clear

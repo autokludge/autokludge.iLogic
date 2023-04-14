@@ -1,0 +1,37 @@
+﻿Dim oDrawDoc As DrawingDocument = ThisDrawing.Document
+Dim oSheet As Sheet
+Dim oSheets As Sheets
+Dim oViews As DrawingViews
+Dim oScaleStr As String
+Dim oScale As Double
+'oScaleStr = InputBox("Enter Desired Scale", "Scaler", "")
+
+oSheets = oDrawDoc.Sheets
+For Each oSheet In oSheets
+oViews = oSheet.DrawingViews
+For Each oView As DrawingView In oViews
+	If oView.ViewType = DrawingViewTypeEnum.kProjectedDrawingViewType Then
+		Dim currentViewStyle = oView.ViewStyle
+		Dim newViewStyle
+
+		If currentViewStyle = DrawingViewStyleEnum.kHiddenLineDrawingViewStyle Then
+			newViewStyle = DrawingViewStyleEnum.kShadedHiddenLineDrawingViewStyle 
+		Else If currentViewStyle = DrawingViewStyleEnum.kHiddenLineRemovedDrawingViewStyle Then
+			newViewStyle = DrawingViewStyleEnum.kShadedDrawingViewStyle
+		Else
+			newViewStyle = DrawingViewStyleEnum.kShadedDrawingViewStyle
+		End If
+
+		'MsgBox(currentviewstyle)
+		'MsgBox(newViewStyle)
+
+		oView.ViewStyle = newViewStyle
+
+		oView.ShowLabel = True
+		oView.Label.FormattedText = "<StyleOverride Underline=""True"">ISOMETRIC VIEW</StyleOverride>"
+		
+	End If
+Next
+Next
+
+oDrawDoc.Update()
